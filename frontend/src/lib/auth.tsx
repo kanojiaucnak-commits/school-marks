@@ -4,6 +4,7 @@ import { useAuth as useClerkAuth, useUser as useClerkUser } from '@clerk/react';
 import type { CurrentUser, Permission, Role } from '@school/shared';
 import { setSupabaseTokenGetter } from './supabase';
 import { setEdgeTokenGetter } from './edge';
+import { buildUrl } from './origin';
 import { rpc } from './query';
 
 /**
@@ -72,7 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Drop cached server state first: once the Clerk session is gone none of it
     // is readable, and leaving it cached would flash another user's rows.
     queryClient.clear();
-    await signOut({ redirectUrl: '/' });
+    // Through `buildUrl`, never a bare `/`: Clerk resolves it against the origin
+    // root, which on GitHub Pages is a 404 — the app lives at `/school-marks/`.
+    await signOut({ redirectUrl: buildUrl('/') });
   }, [queryClient, signOut]);
 
   const refresh = useCallback(async () => {

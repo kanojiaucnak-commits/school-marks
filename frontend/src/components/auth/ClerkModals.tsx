@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth as useClerkAuth, useClerk } from '@clerk/react';
 import { useNavigate } from 'react-router-dom';
+import { buildUrl } from '../../lib/origin';
 import { SCHOOL } from '../../lib/school';
 
 /**
@@ -39,11 +40,6 @@ import { SCHOOL } from '../../lib/school';
  * `signInForceRedirectUrl` and `signUpForceRedirectUrl`, and they are not
  * interchangeable.
  */
-
-function buildUrl(path: string): string {
-  const origin = import.meta.env.VITE_APP_ORIGIN;
-  return origin ? `${origin}${path}` : path;
-}
 
 /**
  * How long to wait for Clerk's modal before offering a retry.

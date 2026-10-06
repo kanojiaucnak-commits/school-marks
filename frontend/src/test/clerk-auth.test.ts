@@ -88,4 +88,13 @@ describe('Clerk sign-in integration', () => {
     expect(main).toMatch(/<BrowserRouter\s+basename=/);
     expect(main).toContain('import.meta.env.BASE_URL');
   });
+
+  it('signs out through the app root, because Pages serves / as a 404', () => {
+    const auth = read('lib/auth.tsx');
+
+    // Clerk performs the redirect itself and never sees the router basename, so
+    // a bare '/' lands on https://<user>.github.io/ — outside the app.
+    expect(auth).toMatch(/signOut\(\{\s*redirectUrl:\s*buildUrl\('\/'\)\s*\}\)/);
+    expect(auth).not.toMatch(/redirectUrl:\s*['"`]\//);
+  });
 });
