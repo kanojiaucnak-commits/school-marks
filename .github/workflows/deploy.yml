@@ -18,6 +18,8 @@ on:
       - 'frontend/**'
       - 'shared/**'
       - 'supabase/**'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
