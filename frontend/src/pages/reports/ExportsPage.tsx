@@ -169,7 +169,7 @@ export default function ExportsPage() {
                     <TD>
                       <ToneBadge tone={statusTone(job.status)}>{job.status}</ToneBadge>
                       {job.error && (
-                        <span className="mt-0.5 block max-w-xs truncate text-xs text-rose-700">
+                        <span className="mt-0.5 block max-w-xs truncate text-xs text-danger-700">
                           {job.error}
                         </span>
                       )}

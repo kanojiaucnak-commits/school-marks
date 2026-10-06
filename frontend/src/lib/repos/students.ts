@@ -1,5 +1,4 @@
-import type { Student, Gender, StudentStatus } from '@school/shared';
-import { normalizeName as normalizeNameShared } from '@school/shared';
+import type { Student, StudentStatus } from '@school/shared';
 import { getSupabase } from '../supabase';
 import {
   applySearch,
@@ -82,121 +81,6 @@ export async function getStudent(id: string): Promise<Student | null> {
     .maybeSingle();
   if (error) throw toQueryError(error);
   return camel<Student>(data);
-}
-
-export async function createStudent(input: {
-  academicYearId: string;
-  classId: string;
-  sectionId: string;
-  studentNumber: string;
-  fullName: string;
-  admissionNumber?: string | null;
-  rollNumber?: number | null;
-  dateOfBirth?: string | null;
-  gender?: Gender | null;
-  guardianName?: string | null;
-  guardianPhone?: string | null;
-  guardianEmail?: string | null;
-  address?: string | null;
-}): Promise<Student> {
-  const { data, error } = await getSupabase()
-    .from('students')
-    .insert({
-      academic_year_id: input.academicYearId,
-      class_id: input.classId,
-      section_id: input.sectionId,
-      student_number: input.studentNumber,
-      // Precomputed for OCR matching and search. Mirrors normalizeName() in
-      // @school/shared so both sides agree on what counts as the same name.
-      normalized_name: normalizeName(input.fullName),
-      full_name: input.fullName,
-      admission_number: input.admissionNumber ?? null,
-      roll_number: input.rollNumber ?? null,
-      date_of_birth: input.dateOfBirth ?? null,
-      gender: input.gender ?? null,
-      guardian_name: input.guardianName ?? null,
-      guardian_phone: input.guardianPhone ?? null,
-      guardian_email: input.guardianEmail ?? null,
-      address: input.address ?? null,
-    })
-    .select('*')
-    .single();
-
-  if (error) {
-    if (error.code === '23505') {
-      throw new Error(
-        'That student number is already used for this academic year.',
-      );
-    }
-    throw toQueryError(error);
-  }
-  return camel<Student>(data)!;
-}
-
-export async function updateStudent(
-  id: string,
-  patch: Partial<
-    Pick<
-      Student,
-      | 'fullName'
-      | 'rollNumber'
-      | 'dateOfBirth'
-      | 'gender'
-      | 'guardianName'
-      | 'guardianPhone'
-      | 'guardianEmail'
-      | 'address'
-      | 'status'
-      | 'classId'
-      | 'sectionId'
-    >
-  >,
-): Promise<Student> {
-  const row: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(patch)) {
-    if (value === undefined) continue;
-    row[key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)] = value;
-  }
-  if (typeof patch.fullName === 'string') {
-    row.normalized_name = normalizeName(patch.fullName);
-  }
-
-  const { data, error } = await getSupabase()
-    .from('students')
-    .update(row)
-    .eq('id', id)
-    .select('*')
-    .single();
-  if (error) throw toQueryError(error);
-  return camel<Student>(data)!;
-}
-
-/**
- * Withdraw rather than delete when the student has marks.
- *
- * `DELETE` would cascade to their `marks` rows (Business Rule 10 protects
- * history), so a student who has sat an exam is deactivated instead. A student
- * with no marks at all can be removed outright.
- */
-export async function deleteStudent(id: string): Promise<void> {
-  const { count, error: countError } = await getSupabase()
-    .from('marks')
-    .select('id', { count: 'exact', head: true })
-    .eq('student_id', id);
-
-  if (countError) throw toQueryError(countError);
-
-  if ((count ?? 0) > 0) {
-    const { error } = await getSupabase()
-      .from('students')
-      .update({ status: 'inactive' })
-      .eq('id', id);
-    if (error) throw toQueryError(error);
-    return;
-  }
-
-  const { error } = await getSupabase().from('students').delete().eq('id', id);
-  if (error) throw toQueryError(error);
 }
 
 /**
@@ -359,17 +243,6 @@ export async function listSectionRoster(sectionId: string): Promise<Student[]> {
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                      */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Normalised form used by OCR student matching.
- *
- * Imported rather than reimplemented: the OCR Edge Function needs the identical
- * rule, and two divergent copies is exactly how "Ana Silva" and "Ana  Silva"
- * stop matching between upload and review.
- */
-function normalizeName(name: string): string {
-  return normalizeNameShared(name);
-}
 
 /** Postgres `numeric` arrives as a string over PostgREST. */
 function toNumber(value: unknown): number {

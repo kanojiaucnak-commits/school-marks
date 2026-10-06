@@ -205,7 +205,7 @@ export default function TeachersPage() {
                         <ToneBadge tone="neutral">Inactive</ToneBadge>
                       )}
                       {user.mustChangePassword && (
-                        <Badge className="ml-1.5 bg-amber-50 text-amber-800 ring-amber-300">
+                        <Badge className="ml-1.5 bg-warning-50 text-warning-800 ring-warning-300">
                           Must reset
                         </Badge>
                       )}

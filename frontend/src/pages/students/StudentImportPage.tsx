@@ -305,7 +305,7 @@ export default function StudentImportPage() {
                         <TD className="tabular max-w-[16rem] truncate text-ink-muted">
                           {issue.value || '—'}
                         </TD>
-                        <TD className="text-rose-700">{issue.message}</TD>
+                        <TD className="text-danger-700">{issue.message}</TD>
                       </TR>
                     )),
                   )}
@@ -453,8 +453,8 @@ function Summary({
     <div
       className={cn(
         'rounded-lg border p-3',
-        tone === 'success' && 'border-emerald-200 bg-emerald-50',
-        tone === 'danger' && 'border-rose-200 bg-rose-50',
+        tone === 'success' && 'border-success-200 bg-success-50',
+        tone === 'danger' && 'border-danger-200 bg-danger-50',
         tone === 'accent' && 'border-brand-200 bg-brand-50',
         tone === 'neutral' && 'border-line bg-surface-muted',
       )}

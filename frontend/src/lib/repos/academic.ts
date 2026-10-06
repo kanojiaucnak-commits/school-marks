@@ -15,7 +15,6 @@ import type {
   CreateExamInput,
   CreateSectionInput,
   CreateSubjectInput,
-  UpdateAcademicYearInput,
 } from '@school/shared';
 import { getSupabase } from '../supabase';
 import { camel, camelMany, paginate, QueryError, rpc, toQueryError, type ListParams, type ListResponse, type Row } from '../query';
@@ -199,31 +198,6 @@ export async function archiveAcademicYear(id: string): Promise<void> {
     .eq('id', id);
 
   if (error) throw toQueryError(error);
-}
-
-/**
- * Edit a year in place.
- *
- * Uniqueness is `(academic_year_id, name)`-shaped in practice — really on `name`
- * within the table — so a clash comes back as `23505` with the index name rather
- * than the column. Naming the likely field beats passing the raw index through.
- */
-export async function updateAcademicYear(id: string, patch: UpdateAcademicYearInput): Promise<AcademicYear> {
-  const { data, error } = await getSupabase()
-    .from('academic_years')
-    .update(toPatchRow(patch as Row))
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === '23505') {
-      throw new QueryError('23505', 'That academic year name is already in use.', error.details);
-    }
-    throw toQueryError(error);
-  }
-
-  return camel<AcademicYear>(data)!;
 }
 
 /* -------------------------------------------------------------------------- */

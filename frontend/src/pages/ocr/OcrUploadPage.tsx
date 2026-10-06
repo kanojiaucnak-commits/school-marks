@@ -472,10 +472,10 @@ function DocumentStatusBadge({ document }: { document: OcrDocument }) {
   const styles: Record<string, { className: string; label: string }> = {
     UPLOADED: { className: 'bg-surface-sunken text-ink ring-line-strong', label: 'Uploaded' },
     QUEUED: { className: 'bg-surface-sunken text-ink ring-line-strong', label: 'Queued' },
-    PROCESSING: { className: 'bg-sky-50 text-sky-800 ring-sky-300', label: 'Processing' },
-    COMPLETED: { className: 'bg-amber-50 text-amber-800 ring-amber-300', label: 'Needs verification' },
-    FAILED: { className: 'bg-rose-50 text-rose-800 ring-rose-300', label: 'Failed' },
-    CONFIRMED: { className: 'bg-emerald-50 text-emerald-800 ring-emerald-300', label: 'Confirmed' },
+    PROCESSING: { className: 'bg-info-50 text-info-800 ring-info-300', label: 'Processing' },
+    COMPLETED: { className: 'bg-warning-50 text-warning-800 ring-warning-300', label: 'Needs verification' },
+    FAILED: { className: 'bg-danger-50 text-danger-800 ring-danger-300', label: 'Failed' },
+    CONFIRMED: { className: 'bg-success-50 text-success-800 ring-success-300', label: 'Confirmed' },
     CANCELLED: { className: 'bg-surface-sunken text-ink ring-line-strong', label: 'Cancelled' },
   };
 

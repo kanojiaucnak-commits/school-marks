@@ -397,7 +397,7 @@ function SchemeEditor({
                         setRules((current) => current.filter((_, i) => i !== index))
                       }
                       aria-label={`Remove band ${index + 1}`}
-                      className="rounded p-1 text-ink-faint hover:bg-rose-50 hover:text-rose-600"
+                      className="rounded p-1 text-ink-faint hover:bg-danger-50 hover:text-danger-600"
                     >
                       <IconTrash size={15} />
                     </button>
@@ -413,7 +413,7 @@ function SchemeEditor({
             {validation.message}
           </Alert>
         ) : (
-          <p className="mt-2 text-xs text-emerald-700">
+          <p className="mt-2 text-xs text-success-700">
             Bands cover 0–100 with no gaps or overlaps.
           </p>
         )}

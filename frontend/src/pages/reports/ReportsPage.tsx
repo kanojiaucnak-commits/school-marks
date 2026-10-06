@@ -1149,7 +1149,7 @@ function Summary({
       <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">{label}</p>
       <p
         className={`tabular mt-0.5 text-lg font-semibold ${
-          tone === 'success' ? 'text-emerald-700' : tone === 'danger' ? 'text-rose-700' : 'text-ink'
+          tone === 'success' ? 'text-success-700' : tone === 'danger' ? 'text-danger-700' : 'text-ink'
         }`}
       >
         {value}

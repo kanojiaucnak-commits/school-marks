@@ -369,7 +369,7 @@ export function confidenceBandOf(confidence: number | null | undefined): Confide
 
 const TONE_CLASS: Record<Tone, { className: string; dotClassName: string }> = {
   neutral: { className: 'bg-muted-soft text-muted-strong ring-line-strong', dotClassName: 'bg-muted-base' },
-  info: { className: 'bg-info-soft text-info-strong ring-sky-300', dotClassName: 'bg-info-base' },
+  info: { className: 'bg-info-soft text-info-strong ring-info-300', dotClassName: 'bg-info-base' },
   success: { className: 'bg-success-soft text-success-strong ring-success-300', dotClassName: 'bg-success-base' },
   warning: { className: 'bg-warning-soft text-warning-strong ring-warning-300', dotClassName: 'bg-warning-base' },
   danger: { className: 'bg-danger-soft text-danger-strong ring-danger-300', dotClassName: 'bg-danger-base' },

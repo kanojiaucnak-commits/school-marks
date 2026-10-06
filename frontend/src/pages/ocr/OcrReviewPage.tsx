@@ -555,7 +555,7 @@ export default function OcrReviewPage() {
                           className={cn(
                             'rounded-md border border-dashed px-2.5 py-1 text-xs font-medium transition-colors',
                             row.candidates.length > 0
-                              ? 'border-amber-400 bg-amber-50 text-amber-900'
+                              ? 'border-warning-400 bg-warning-50 text-warning-900'
                               : 'border-line-strong bg-surface text-ink hover:bg-surface-sunken',
                           )}
                         >
@@ -588,11 +588,11 @@ export default function OcrReviewPage() {
                           }
                           className={cn(
                             'tabular mt-1 h-9 w-24 rounded-md border px-2 text-right text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500',
-                            validation.valid ? 'border-line-strong' : 'border-rose-400 bg-rose-50',
+                            validation.valid ? 'border-line-strong' : 'border-danger-400 bg-danger-50',
                           )}
                         />
                         {!validation.valid && (
-                          <p className="mt-0.5 text-[11px] font-medium text-rose-700">
+                          <p className="mt-0.5 text-[11px] font-medium text-danger-700">
                             {validation.message}
                           </p>
                         )}

@@ -259,15 +259,6 @@ export async function confirmOcrDocument(
   });
 }
 
-export async function deleteOcrDocument(documentId: string): Promise<void> {
-  // The Edge Function deletes the Storage object too; a database-only delete
-  // would orphan the uploaded mark sheet forever.
-  await edgeFetch('ocr-delete', {
-    method: 'POST',
-    body: { documentId },
-  });
-}
-
 /** Search students to resolve an ambiguous OCR match by hand. */
 export async function searchStudentsForMatch(
   term: string,
