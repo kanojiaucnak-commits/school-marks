@@ -19,6 +19,9 @@ approve and lock them, and every step is audited.
 >
 > See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the design, the setup steps and
 > an honest list of what has and has not been executed.
+>
+> **New here?** Follow **[docs/signup-walkthrough.md](./docs/signup-walkthrough.md)**
+> for a step-by-step guide to signing up, requesting classes and getting access.
 
 ---
 
