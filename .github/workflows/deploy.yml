@@ -55,9 +55,12 @@ jobs:
       - name: Build
         run: npm run build -w @school/frontend
         env:
-          # Pages serves the project from https://<user>.github.io/<repo>/, so
-          # asset URLs must be prefixed with the repository name.
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # A custom domain serves the site from the root; a github.io project
+          # page serves it under /<repo>/. Set the repository variable
+          # VITE_BASE_PATH (e.g. `/`) to switch to a custom domain — when the
+          # variable is absent this falls back to the project path, so both
+          # forms can coexist during a switchover.
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH || format('/{0}/', github.event.repository.name) }}
           # All three are read at build time by `main.tsx` and inlined into the
           # bundle, so the build *cannot* succeed without them — `main.tsx`
           # collects any that are absent and renders a configuration-error screen
