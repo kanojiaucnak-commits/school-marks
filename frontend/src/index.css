@@ -1,0 +1,251 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Focus ring is a token so it is identical everywhere, including inside the
+       marks grid where it does the most work. */
+    --focus-ring: theme('colors.brand.600');
+    --focus-ring-offset: theme('colors.surface.DEFAULT');
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-app text-base text-ink antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  /*
+   * Never remove the focus ring — only make it clearly visible.
+   *
+   * Keyboard users navigate the marks grid almost exclusively, and this app is
+   * used for hours at a stretch, so the ring is tuned to be obvious at a glance
+   * without being visually loud on a mouse click.
+   */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* A form control that failed validation must be obvious even if the colour
+     does not come through — the red border is paired with a message everywhere,
+     but this keeps the state legible on its own. */
+  [aria-invalid='true'] {
+    /* no-op hook; the border colour is set per-component */
+  }
+
+  ::selection {
+    @apply bg-brand-100 text-brand-900;
+  }
+
+  /* Scrollbars: present but quiet. */
+  * {
+    scrollbar-color: theme('colors.slate.300') transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ==========================================================================
+   Components
+   ========================================================================== */
+
+@layer components {
+  /* Visible only when focused. */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50
+           focus:rounded focus:bg-brand-700 focus:px-4 focus:py-2 focus:text-sm
+           focus:font-semibold focus:text-white;
+  }
+
+  /*
+   * A page title, set in the school's display face.
+   *
+   * Only `PageHeader` uses it. Headings inside a panel stay in the UI face at a
+   * smaller size: mixing two families in one column is what makes a dense
+   * console look like a brochure.
+   */
+  .page-title {
+    @apply font-display text-xl font-bold leading-tight tracking-[-0.015em] text-ink md:text-2xl;
+  }
+
+  /* Section and panel headings, and the small uppercase eyebrow above them. */
+  .eyebrow {
+    @apply text-2xs font-semibold uppercase tracking-[0.09em] text-ink-faint;
+  }
+
+  /*
+   * Numbers in a marks table must line up column-wise, or a teacher cannot
+   * scan a class for a pattern. Every numeric cell uses this.
+   */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /*
+   * A data surface. This is *not* a card — it has no shadow and a 1px hairline,
+   * because a table is data, not a floating object. Use `.card-surface` only
+   * when something genuinely needs to sit above the page.
+   */
+  .card-surface {
+    @apply rounded-lg border border-line bg-surface;
+  }
+
+  /*
+   * A short accent rule in the school's brand colour.
+   *
+   * The school's own website sets section headings over a short coloured bar, and
+   * the device here echoes it: a 32px brand rule that marks a heading as
+   * deliberate without spending a full-width line of ink on it. Reserved for
+   * headings on the public pages and the print letterhead — never for body text
+   * or inside a data table, where a stray coloured pixel reads as a value.
+   */
+  .rule-brand {
+    @apply block h-[2px] w-8 rounded-full bg-brand-600;
+  }
+
+  /* A floating surface: dropdown, dialog, toast, command palette. */
+  .popover-surface {
+    @apply rounded-lg border border-line bg-surface shadow-popover;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-xs bg-surface-sunken;
+  }
+
+  .skeleton::after {
+    @apply absolute inset-0;
+    content: '';
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent);
+    transform: translateX(-100%);
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* Sticky first column for the marks grid on narrow screens. */
+  .sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+  }
+
+  /*
+   * Sticky column *and* header, with the correct background so scrolled cells do
+   * not show through. Kept as a class because getting the z-index and the opaque
+   * background right is easy to get subtly wrong.
+   */
+  .sticky-col-header {
+    position: sticky;
+    left: 0;
+    z-index: 20;
+    background-color: theme('colors.surface.muted');
+  }
+
+  .sticky-col-body {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: theme('colors.surface.DEFAULT');
+  }
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: theme('colors.slate.300') transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /*
+   * Hairline row separators inside a table body. `divide-y` is fine, but this
+   * variant is lighter and survives a hover colour without looking heavy.
+   */
+  .row-rules > * + * {
+    @apply border-t border-line-soft;
+  }
+
+  /* Clamp a long student or subject name to two lines. */
+  .clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ==========================================================================
+   Print — a marks sheet or report must come out clean on paper
+   ========================================================================== */
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    @apply bg-white text-black;
+  }
+
+  /* The app chrome is screen furniture; paper needs none of it. */
+  nav,
+  aside,
+  header.sticky,
+  [role='dialog'] {
+    display: none !important;
+  }
+
+  /* Borders carry the structure on paper, since shadows do not print. */
+  .card-surface,
+  .popover-surface {
+    @apply border-slate-400 shadow-none;
+  }
+
+  /* Never split a student's row across two pages. */
+  tr {
+    break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+}

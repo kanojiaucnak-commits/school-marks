@@ -1,0 +1,146 @@
+# Supabase project configuration.
+#
+# The CLI reads this for `supabase start`, `supabase db reset`,
+# `supabase functions serve` and `supabase config push`. Deployment of the
+# hosted project's auth settings goes through `supabase config push`, which is
+# what applies the `[auth.third_party]` block below to the cloud project.
+#
+# Requires the Supabase CLI:  npm install -g supabase
+
+project_id = "school-marks"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.migrations]
+# Applied in filename order by `supabase db push` / `supabase db reset`.
+schema_paths = ["./supabase/migrations"]
+
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+# Uploads are written by Edge Functions and read through signed URLs; the buckets
+# themselves are created in 0002_rls.sql with `public = false`.
+file_size_limit = "50MiB"
+
+[auth]
+# Clerk is the identity provider, and Supabase Auth is only the verifier.
+#
+# End users sign in through Clerk and never see a Supabase Auth screen. The
+# browser forwards Clerk's session token to PostgREST; the `[auth.third_party]`
+# block below teaches GoTrue to trust Clerk's JWKS, so `auth.jwt() ->> 'sub'`
+# resolves to the Clerk user id (`user_2aBc...`) that `profiles.id` stores.
+#
+# This is what makes RLS work at all: every policy in 0002_rls.sql keys off
+# `current_clerk_id()`, which reads that claim.
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/sign-in", "http://localhost:5173"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+
+# -----------------------------------------------------------------------------
+# Third-party auth: Clerk
+# -----------------------------------------------------------------------------
+# Without this, PostgREST verifies tokens with the project's own signing key and
+# rejects every Clerk token with `PGRST301 / "None of the keys was able to decode
+# the JWT"`. Clerk signs with RS256; the project publishes only its own ES256 key.
+#
+# `domain` is the bare instance host, with no scheme and no trailing slash.
+# Supabase appends `/.well-known/jwks.json` itself. A full `https://…` URL here
+# is rejected.
+#
+# Push it with `supabase config push`. Adding the provider in the dashboard is
+# not sufficient on its own — the running auth service reads this file.
+[auth.third_party.clerk]
+enabled = true
+domain = "musical-giraffe-9535.clerk.accounts.dev"
+
+[auth.email]
+# Not used. Clerk owns sign-up and sign-in; Supabase's email provider stays off
+# so nobody can end up with a second, parallel account that RLS knows nothing
+# about. Accounts are self-service in Clerk, and migration 0008 provisions a
+# teacher profile on first authenticated request.
+enable_signup = false
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+# -----------------------------------------------------------------------------
+# Edge Functions
+#
+# `verify_jwt = false` everywhere, and this is deliberate rather than lazy.
+#
+# Clerk is the token issuer in this project, not Supabase Auth. The platform's
+# own JWT check would reject every Clerk token, so it is off and every function
+# verifies the token itself against the Clerk instance JWKS — see
+# `_shared/auth.ts::requireCaller()`, which every function calls first.
+#
+# Turning platform verification off means the function IS the security boundary.
+# That is why `_shared/auth.ts` fails closed, and why each function re-checks
+# permissions itself: once a function uses the service role to mint a signed URL
+# or write to Storage, it has bypassed RLS and must not assume RLS still applies.
+# -----------------------------------------------------------------------------
+
+[functions.ocr-upload]
+verify_jwt = false
+
+[functions.ocr-process]
+verify_jwt = false
+
+[functions.ocr-confirm]
+verify_jwt = false
+
+[functions.ocr-file-url]
+verify_jwt = false
+
+[functions.ocr-delete]
+verify_jwt = false
+
+[functions.ocr-providers]
+verify_jwt = false
+
+[functions.export-generate]
+verify_jwt = false
+
+[functions.export-download]
+verify_jwt = false
+
+[functions.report-generate]
+verify_jwt = false
+
+[functions.import-preview]
+verify_jwt = false
+
+[functions.import-commit]
+verify_jwt = false
+
+[functions.import-template]
+verify_jwt = false
+
+[functions.admin-create-clerk-user]
+verify_jwt = false
+
+# Required secrets (set with `supabase secrets set`, never in this file):
+#   CLERK_ISSUER        e.g. https://your-app.clerk.accounts.dev
+#   CLERK_SECRET_KEY    only admin-create-clerk-user needs this
+#   OCR_PROVIDER        google | azure | textract | manual
+#   GOOGLE_VISION_API_KEY / AZURE_VISION_ENDPOINT / AZURE_VISION_KEY
+#   AWS_TEXTRECT_ACCESS_KEY_ID / AWS_TEXTRECT_SECRET_ACCESS_KEY / AWS_REGION

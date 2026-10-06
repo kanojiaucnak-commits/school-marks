@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      name="description"
+      content="Marks management for Christ Church Co-Ed School, Saliwada, Jabalpur — secure entry, OCR-assisted verification, review and reporting."
+    />
+
+    <!--
+      Theme colour is the school's own brand, so the browser chrome, the Android
+      splash and the installed PWA all pick up the institutional colour rather
+      than a default blue.
+    -->
+    <meta name="theme-color" content="#43616f" />
+
+    <title>Christ Church Co-Ed School · Marks Management</title>
+
+    <!--
+      Lato, the face the school sets its own name in, used for headings and the
+      wordmark only. Preconnect removes the DNS/TLS round trip that would
+      otherwise delay the first paint on a school connection.
+
+      `display=swap` is deliberate: if the font request is slow or blocked, the
+      page renders immediately in the system UI stack and upgrades when the font
+      arrives. A blocked font must never leave a teacher staring at a blank
+      screen before entering marks.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap"
+    />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="h-full bg-app text-ink antialiased">
+    <div id="root" class="h-full"></div>
+    <noscript>
+      This application requires JavaScript. Please enable it in your browser.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

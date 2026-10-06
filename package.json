@@ -1,0 +1,29 @@
+{
+  "name": "school-marks",
+  "version": "2.0.0",
+  "private": true,
+  "description": "School Marks Management System — Clerk auth + Supabase (Postgres, Storage, Edge Functions), deployed to GitHub Pages",
+  "workspaces": [
+    "shared",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @school/frontend",
+    "build": "npm run build -w @school/frontend",
+    "typecheck": "npm run typecheck -w @school/shared && npm run typecheck -w @school/frontend",
+    "test": "npm run test -w @school/shared && npm run test -w @school/frontend",
+    "db:migrate": "supabase db push",
+    "db:reset": "supabase db reset",
+    "db:seed": "supabase db reset",
+    "functions:serve": "supabase functions serve --env-file supabase/.env.local"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

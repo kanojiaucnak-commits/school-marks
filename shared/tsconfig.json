@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "WebWorker"]
+  },
+  // `clientPages.ts` is Edge Function code, but it is the one file in
+  // `supabase/functions/` with no Deno API, no `jsr:`/`npm:` specifier and no
+  // `../_shared/` import, so it typechecks under this project's settings like any
+  // other source file. Everything else there needs the Deno types to check and
+  // stays untypechecked; this file does not have that excuse, and it is a trust
+  // boundary, so it is pulled in deliberately rather than by proximity.
+  "include": ["src/**/*.ts", "../supabase/functions/ocr-process/clientPages.ts"]
+}

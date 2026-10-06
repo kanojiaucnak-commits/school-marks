@@ -1,0 +1,28 @@
+﻿{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": [
+    "Typecheck for the Supabase Edge Functions.",
+    "",
+    "These run on Deno, not Node, and were previously unchecked: the frontend",
+    "`tsconfig.json` does not include `supabase/`, so nothing caught a type error",
+    "in an Edge Function until it failed at runtime in production.",
+    "",
+    "Three things differ from the Node build and each needs opting in:",
+    "  - `allowImportingTsExtensions` — Deno resolves `./x.ts` literally, and the",
+    "    shared modules import each other that way.",
+    "  - an ambient `Deno` global — env vars and the FS live there.",
+    "  - DOM lib — `Request`/`Response`/`crypto.subtle` are web APIs, not Node.",
+    "",
+    "`jsr:` specifiers (supabase-js, @db/postgres) resolve through Deno's own",
+    "registry and are not on npm, so `tsc` reports them as missing modules. That",
+    "is expected and is why `typecheck:functions` filters them out rather than",
+    "installing a stand-in that would type-check against the wrong shape."
+  ],
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": []
+  },
+  "include": ["supabase/functions/**/*.ts", "supabase/functions/deno.d.ts"]
+}

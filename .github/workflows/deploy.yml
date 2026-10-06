@@ -1,0 +1,144 @@
+# ---------------------------------------------------------------------------
+# Deploy the SPA to GitHub Pages
+#
+# Replaces the Cloudflare Pages deploy. Secrets are supplied as repository
+# secrets (Settings → Secrets and variables → Actions), not hard-coded here:
+# VITE_CLERK_PUBLISHABLE_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
+# VITE_APP_ORIGIN, SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_ID,
+# SUPABASE_DB_PASSWORD.
+# ---------------------------------------------------------------------------
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    # Deploy the schema and Edge Functions to Supabase alongside the frontend.
+    # Remove this filter if you want every push to touch the database.
+    paths:
+      - 'frontend/**'
+      - 'shared/**'
+      - 'supabase/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; never cancel one midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build -w @school/frontend
+        env:
+          # Pages serves the project from https://<user>.github.io/<repo>/, so
+          # asset URLs must be prefixed with the repository name.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          # All three are read at build time by `main.tsx` and inlined into the
+          # bundle, so the build *cannot* succeed without them — `main.tsx`
+          # collects any that are absent and renders a configuration-error screen
+          # instead of the app.
+          #
+          # They must be listed here explicitly. Vite will fall back to
+          # `frontend/.env.local` when present, but that file is gitignored so it
+          # does not exist on a clean checkout; without this block every push
+          # would publish a working-looking site that only ever shows "not
+          # configured", with nothing failing in CI to say so.
+          #
+          # They are not a leak. Each one is a *publishable* value: Clerk's
+          # `pk_...`, the Supabase URL, and the anon key are all shipped to every
+          # visitor's browser by design, and real authority comes from RLS plus
+          # Clerk session tokens. Marking them as secrets only masks them in logs.
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Optional; `lib/school.ts` falls back to the bundled defaults without it.
+          VITE_APP_ORIGIN: ${{ secrets.VITE_APP_ORIGIN }}
+
+      - name: Verify the SPA fallback exists
+        # GitHub Pages has no rewrite rules, so a deep link like /app/students
+        # is served by dist/404.html. A missing file here means every direct
+        # navigation to a nested route breaks in production only.
+        run: test -f frontend/dist/404.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # -------------------------------------------------------------------------
+  # Supabase schema + Edge Functions
+  #
+  # Runs only when supabase/** changes. Requires SUPABASE_ACCESS_TOKEN and
+  # SUPABASE_PROJECT_ID as repository secrets, and the CLI installed below.
+  # -------------------------------------------------------------------------
+  supabase:
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to the project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      # `db push` applies only migrations that are not yet recorded in the
+      # remote `supabase_migrations` table, so this is safe to run on every push.
+      # It will not re-run migrations that have already been applied.
+      - name: Apply database migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # `--no-verify-jwt` is required, not an optimisation. These functions
+      # authenticate with Clerk session tokens, but the Supabase gateway only
+      # understands tokens signed with the project's own JWT secret, so with
+      # gateway verification on it rejects every request with a bare 401 before
+      # any function code runs. Each function verifies the Clerk token itself in
+      # `_shared/auth.ts` — real signature validation against Clerk's JWKS.
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}

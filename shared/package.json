@@ -1,0 +1,26 @@
+{
+  "name": "@school/shared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./types": "./src/types.ts",
+    "./constants": "./src/constants.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.3",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.11"
+  }
+}

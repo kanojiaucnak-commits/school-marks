@@ -1,0 +1,32 @@
+﻿{
+    "id":  "user_3KGfauOPkB8fL39mPcY77ReOsxm",
+    "email_address":  null,
+    "primary_email_address_id":  "idn_3KGfYirke2Fp3xP4PfySEvNqnTe",
+    "email_addresses":  [
+                            {
+                                "id":  "idn_3KGfYirke2Fp3xP4PfySEvNqnTe",
+                                "object":  "email_address",
+                                "email_address":  "lgwebosutkarsh@gmail.com",
+                                "reserved":  false,
+                                "verification":  {
+                                                     "object":  "verification_otp",
+                                                     "status":  "verified",
+                                                     "strategy":  "email_code",
+                                                     "attempts":  1,
+                                                     "expire_at":  1791189475294
+                                                 },
+                                "linked_to":  [
+
+                                              ],
+                                "matches_sso_connection":  false,
+                                "created_at":  1791188874665,
+                                "updated_at":  1791188891188
+                            }
+                        ],
+    "identities":  [
+                       null
+                   ],
+    "first_name":  null,
+    "last_name":  null,
+    "username":  null
+}
