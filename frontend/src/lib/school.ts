@@ -36,8 +36,6 @@ export interface SchoolIdentity {
   location: string;
   /** Governing body. Appears in the footer and on the printed report. */
   authority: string;
-  /** Board affiliation, e.g. "C.B.S.E. Affiliation No. 1031217". */
-  affiliation?: string;
   phone?: string;
   email?: string;
   website?: string;
@@ -51,7 +49,6 @@ const DEFAULTS: CompleteIdentity = {
   shortName: 'Christ Church Co-Ed',
   location: 'Gram Saliwada, Mandla Road, Jabalpur (M.P.), India',
   authority: 'Board of Education, Church of North India, Jabalpur Diocese',
-  affiliation: 'C.B.S.E. Affiliation No. 1031217',
   phone: '+91 72250 91111',
   email: 'cccssjalabpur@gmail.com',
   website: 'https://cccssj.in/',
@@ -62,29 +59,7 @@ export const SCHOOL: SchoolIdentity = {
   shortName: setting('VITE_SCHOOL_SHORT_NAME', DEFAULTS.shortName),
   location: setting('VITE_SCHOOL_LOCATION', DEFAULTS.location),
   authority: setting('VITE_SCHOOL_AUTHORITY', DEFAULTS.authority),
-  affiliation: setting('VITE_SCHOOL_AFFILIATION', DEFAULTS.affiliation),
   phone: setting('VITE_SCHOOL_PHONE', DEFAULTS.phone),
   email: setting('VITE_SCHOOL_EMAIL', DEFAULTS.email),
   website: setting('VITE_SCHOOL_WEBSITE', DEFAULTS.website),
 };
-
-/**
- * Two-letter monogram used by the crest when no logo image is supplied.
- *
- * Derived from the short name rather than hardcoded, so a rename cannot leave a
- * stale "SM" floating in the corner. Takes the first letter of the first two
- * significant words, which for "Christ Church Co-Ed School" gives "CC".
- */
-export function monogramOf(name: string): string {
-  const words = name
-    .split(/[\s-]+/)
-    .map((word) => word.replace(/[^A-Za-z]/g, ''))
-    .filter(Boolean);
-
-  if (words.length === 0) return 'S';
-  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
-  return (words[0]![0]! + words[1]![0]!).toUpperCase();
-}
-
-/** The monogram for the configured school. */
-export const SCHOOL_MONOGRAM = monogramOf(SCHOOL.name);

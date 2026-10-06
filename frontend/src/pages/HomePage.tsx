@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { LinkButton } from '../components/ui/Button';
-import { Crest } from '../components/ui/Crest';
 import { SCHOOL } from '../lib/school';
 import {
   IconCheck,
@@ -95,16 +94,13 @@ export function HomePage() {
       {/* ---------------------------------------------------------------- */}
       <header className="sticky top-0 z-20 border-b border-line-soft bg-surface/90 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <Crest size={34} />
-            <div className="min-w-0">
-              <p className="truncate font-display text-sm font-bold leading-tight text-ink">
-                {SCHOOL.name}
-              </p>
-              <p className="truncate text-2xs font-medium uppercase tracking-[0.08em] text-ink-faint">
-                Marks Management
-              </p>
-            </div>
+          <div className="min-w-0">
+            <p className="truncate font-display text-sm font-bold leading-tight text-ink">
+              {SCHOOL.name}
+            </p>
+            <p className="truncate text-2xs font-medium uppercase tracking-[0.08em] text-ink-faint">
+              Marks Management
+            </p>
           </div>
 
           <nav className="flex items-center gap-1.5">
@@ -234,19 +230,15 @@ export function HomePage() {
       <footer className="border-t border-line bg-brand-800 text-white/70">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex items-start gap-3">
-              <Crest size={36} />
-              <div>
-                <p className="font-display text-sm font-bold text-white">{SCHOOL.name}</p>
-                <p className="mt-0.5 text-xs text-white/60">{SCHOOL.location}</p>
-                {SCHOOL.authority && (
-                  <p className="mt-1 max-w-sm text-2xs text-white/50">{SCHOOL.authority}</p>
-                )}
-              </div>
+            <div>
+              <p className="font-display text-sm font-bold text-white">{SCHOOL.name}</p>
+              <p className="mt-0.5 text-xs text-white/60">{SCHOOL.location}</p>
+              {SCHOOL.authority && (
+                <p className="mt-1 max-w-sm text-2xs text-white/50">{SCHOOL.authority}</p>
+              )}
             </div>
 
             <div className="text-xs sm:text-right">
-              {SCHOOL.affiliation && <p className="text-white/70">{SCHOOL.affiliation}</p>}
               {SCHOOL.phone && <p className="tabular mt-1 text-white/50">{SCHOOL.phone}</p>}
               {SCHOOL.website && (
                 <a

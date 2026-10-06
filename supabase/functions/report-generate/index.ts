@@ -49,7 +49,7 @@ interface ReportRow {
  * The school's own identity, as stored in `settings`.
  *
  * Read from the database rather than compiled in, so an administrator who
- * corrects their affiliation number on the Settings screen gets it corrected on
+ * corrects the school's details on the Settings screen gets them corrected on
  * every sheet they print, with no redeploy. See migration 0017.
  */
 interface SchoolIdentity {
@@ -57,7 +57,6 @@ interface SchoolIdentity {
   shortName: string;
   location: string;
   authority: string;
-  affiliation: string;
   phone: string;
   email: string;
   website: string;
@@ -412,13 +411,12 @@ async function buildReport(
     subtitle,
     school: {
       // `school.name` is the one key with a row in every deployment, so it is
-      // the only one with a meaningful fallback; a blank crest on a mark sheet
+      // the only one with a meaningful fallback; a blank name on a mark sheet
       // would be worse than a generic one.
       name: settings['school.name'] || 'Christ Church Co-Ed School',
       shortName: settings['school.short_name'] || 'Christ Church Co-Ed',
       location: settings['school.location'] || '',
       authority: settings['school.authority'] || '',
-      affiliation: settings['school.affiliation'] || '',
       phone: settings['school.phone'] || '',
       email: settings['school.email'] || '',
       website: settings['school.website'] || '',
@@ -553,10 +551,10 @@ function renderReportHtml(report: ReportPayload, autoPrint: boolean): string {
   }
 
   /* ── Letterhead ───────────────────────────────────────────────────────────
-     A CBSE institution's mark sheet is expected to carry the school name, its
-     address and its affiliation number. The old header printed the name in a
-     small uppercase line above the title and nothing else, which is not a
-     document any school would put its name to. */
+     The mark sheet header carries the school name and its address in type
+     alone. The old header printed the name in a small uppercase line above the
+     title and nothing else, which is not a document any school would put its
+     name to. */
   header {
     border-bottom: 2px solid #43616f;
     padding-bottom: 10px;
@@ -572,10 +570,6 @@ function renderReportHtml(report: ReportPayload, autoPrint: boolean): string {
     margin: 0;
   }
   .letterhead .loc { font-size: 10px; color: #57534e; margin: 2px 0 0; }
-  .letterhead .affil {
-    font-size: 9px; color: #57534e; margin: 2px 0 0;
-    text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600;
-  }
   .right { text-align: right; font-size: 9px; line-height: 1.5; color: #57534e; flex-shrink: 0; }
   .right .title {
     font: 700 15px/1.2 'Lato', ui-sans-serif, system-ui, sans-serif;
@@ -612,11 +606,9 @@ function renderReportHtml(report: ReportPayload, autoPrint: boolean): string {
 <body>
 <header>
   <div class="letterhead">
-    ${crestSvg(report.school.name)}
     <div>
       <p class="name">${escapeHtml(report.school.name)}</p>
       ${report.school.location ? `<p class="loc">${escapeHtml(report.school.location)}</p>` : ''}
-      ${report.school.affiliation ? `<p class="affil">${escapeHtml(report.school.affiliation)}</p>` : ''}
     </div>
   </div>
 
@@ -669,53 +661,6 @@ ${
 ${autoPrint ? '<script>window.setTimeout(function(){window.print()},350)</script>' : ''}
 </body>
 </html>`;
-}
-
-/**
- * The crest, as inline SVG.
- *
- * Inline rather than an `<img src>` because this document is written into a
- * detached window via `document.write` and printed — an external image would be
- * a second request that can fail, and a broken-image icon in the corner of a
- * school's letterhead is worse than no crest at all. Inline SVG cannot fail to
- * load and cannot 404.
- *
- * Geometry matches `components/ui/Crest.tsx`: a sage shield ringed in the brand
- * slate-teal, carrying a monogram. It is the same mark the sidebar shows, drawn
- * by the same proportions, so screen and paper agree.
- *
- * ── No webfont ───────────────────────────────────────────────────────────────
- *
- * The monogram is deliberately rendered in the generic serif stack rather than
- * Lato. This document must print identically whether or not a font request
- * succeeded, and a webfont that arrives after `window.print()` has fired prints
- * as a fallback anyway. The letterhead's *name* is set in Lato with a system
- * fallback, so a slow font degrades to the system sans rather than to nothing.
- */
-function crestSvg(schoolName: string): string {
-  return `<svg class="crest" width="44" height="44" viewBox="0 0 48 48" role="img" aria-label="${escapeHtml(schoolName)} crest">
-  <path d="M24 2.5 5.5 8.5v15.2c0 9.5 7.4 17.9 18.5 21.8 11.1-3.9 18.5-12.3 18.5-21.8V8.5Z" fill="#5d7772"/>
-  <path d="M24 2.5 5.5 8.5v15.2c0 9.5 7.4 17.9 18.5 21.8 11.1-3.9 18.5-12.3 18.5-21.8V8.5Z" fill="none" stroke="#43616f" stroke-width="2.5"/>
-  <text x="24" y="24" text-anchor="middle" dominant-baseline="central" fill="#ffffff" font-family="Georgia, 'Times New Roman', serif" font-size="17" font-weight="700">${escapeHtml(monogramOf(schoolName))}</text>
-</svg>`;
-}
-
-/**
- * Two-letter monogram, derived from the school name.
- *
- * Mirrors `monogramOf()` in `frontend/src/lib/school.ts`. Derived rather than
- * hardcoded so that an administrator renaming the school in Settings cannot
- * leave a stale "CC" printed on a mark sheet.
- */
-function monogramOf(name: string): string {
-  const words = name
-    .split(/[\s-]+/)
-    .map((word) => word.replace(/[^A-Za-z]/g, ''))
-    .filter(Boolean);
-
-  if (words.length === 0) return 'S';
-  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
-  return (words[0]![0]! + words[1]![0]!).toUpperCase();
 }
 
 function toCsv(rows: ReportRow[]): string {

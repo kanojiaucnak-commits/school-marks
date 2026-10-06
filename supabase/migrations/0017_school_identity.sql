@@ -18,7 +18,7 @@
 -- The database wins, for one reason: `settings` is editable at runtime by
 -- somebody who can sign in, whereas `VITE_*` needs a rebuild and a redeploy.
 -- A school administrator is exactly the person who should be able to correct
--- their own affiliation number, and they cannot run a deploy.
+-- the school's own details, and they cannot run a deploy.
 --
 -- `VITE_SCHOOL_*` is therefore demoted to a *fallback* for values the database
 -- has not got, which keeps a fresh clone working before anyone opens Settings.
@@ -41,7 +41,6 @@ insert into public.settings (key, value) values
   ('school.short_name',    'Christ Church Co-Ed'),
   ('school.location',      'Gram Saliwada, Mandla Road, Jabalpur (M.P.), India'),
   ('school.authority',     'Board of Education, Church of North India, Jabalpur Diocese'),
-  ('school.affiliation',   'C.B.S.E. Affiliation No. 1031217'),
   ('school.phone',         '+91 72250 91111'),
   ('school.email',         'cccssjalabur@gmail.com'),
   ('school.website',       'https://cccssj.in/')
@@ -52,7 +51,7 @@ on conflict (key) do update set value = excluded.value;
 --
 -- It was seeded as 'Demo School' in 0003 and corrected by hand afterwards, so
 -- re-seeding it here would silently revert whatever the administrator has since
--- typed. The other seven keys are new, so there is nothing to preserve.
+-- typed. The other six keys are new, so there is nothing to preserve.
 --
 -- The only guard added is a non-empty default for the case where the row is
 -- missing entirely, which would otherwise render a blank letterhead.

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth as useClerkAuth, useClerk } from '@clerk/react';
 import { useNavigate } from 'react-router-dom';
-import { Crest } from '../ui/Crest';
 import { SCHOOL } from '../../lib/school';
 
 /**
@@ -149,11 +148,10 @@ function Opener({
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="w-full max-w-md rounded-lg border border-line bg-surface p-6 text-center shadow-card">
-          {/* The crest and school name sit on the failure screen too: this is the
-              one moment a user is definitely looking, and it should look like the
+          {/* The school name sits on the failure screen too: this is the one
+              moment a user is definitely looking, and it should look like the
               school's system rather than a generic error card. */}
-          <div className="mb-4 flex flex-col items-center gap-2">
-            <Crest size={40} />
+          <div className="mb-4">
             <p className="font-display text-sm font-bold leading-tight text-ink">{SCHOOL.name}</p>
           </div>
 

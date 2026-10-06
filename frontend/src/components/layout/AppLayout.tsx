@@ -21,8 +21,7 @@ import {
 } from '../ui/icons';
 import { NotificationPanel } from './NotificationPanel';
 import { ErrorBoundary } from '../ui/ErrorBoundary';
-import { Wordmark } from '../ui/Crest';
-import { SCHOOL } from '../../lib/school';
+import { Wordmark } from '../ui/Wordmark';
 
 /**
  * Application shell.
@@ -205,17 +204,17 @@ function Sidebar({
     >
       {/*
         The sidebar head is the one place the school's identity is permanent. It
-        carries the crest, the school's name and the wordmark's descriptor line,
-        on a brand field so it reads as a masthead rather than a nav bar with a
-        logo dropped in.
+        carries the school's name and the wordmark's descriptor line on a brand
+        field, so it reads as a masthead rather than a nav bar with a logo
+        dropped in.
 
         The `no-print` class matters: on paper this panel is hidden by the print
-        rules in `index.css`, and the letterhead in `Crest.tsx` takes over.
+        rules in `index.css`, and the letterhead in the report takes over.
       */}
       <div className="no-print shrink-0 bg-brand-700 px-3 pb-3 pt-3 text-white">
         <div className="flex items-start justify-between gap-2">
           <Link to="/app" className="min-w-0 rounded focus-visible:outline-none">
-            <Wordmark tone="light" size={28} />
+            <Wordmark tone="light" />
           </Link>
           <button
             type="button"
@@ -226,12 +225,6 @@ function Sidebar({
             <IconClose size={16} />
           </button>
         </div>
-
-        {SCHOOL.affiliation && (
-          <p className="mt-2 truncate text-2xs font-medium uppercase tracking-wide text-white/60">
-            {SCHOOL.affiliation}
-          </p>
-        )}
       </div>
 
       <nav className="no-print flex-1 overflow-y-auto px-2 py-3 scrollbar-thin">
