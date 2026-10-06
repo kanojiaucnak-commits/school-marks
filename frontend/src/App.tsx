@@ -36,6 +36,7 @@ const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
 const ExportsPage = lazy(() => import('./pages/reports/ExportsPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
+const DatabasePage = lazy(() => import('./pages/admin/DatabasePage'));
 const ProfilePage = lazy(() => import('./pages/account/ProfilePage'));
 const MyClassesPage = lazy(() => import('./pages/MyClassesPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -178,6 +179,7 @@ export function App() {
           <Route path="exports" element={<ExportsPage />} />
           <Route path="audit" element={<AuditLogPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="database" element={<DatabasePage />} />
 
           <Route path="profile" element={<ProfilePage />} />
         </Route>

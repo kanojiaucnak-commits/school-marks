@@ -9,5 +9,9 @@
   // other source file. Everything else there needs the Deno types to check and
   // stays untypechecked; this file does not have that excuse, and it is a trust
   // boundary, so it is pulled in deliberately rather than by proximity.
-  "include": ["src/**/*.ts", "../supabase/functions/ocr-process/clientPages.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../supabase/functions/ocr-process/clientPages.ts",
+    "../supabase/functions/schema-graph/schemaGraph.ts"
+  ]
 }

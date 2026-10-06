@@ -536,4 +536,5 @@ export const ICONS: Record<string, (props: IconProps) => ReactElement> = {
   chart: IconChart,
   shield: IconShield,
   cog: IconCog,
+  database: IconDatabase,
 };

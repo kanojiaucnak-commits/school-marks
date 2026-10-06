@@ -90,6 +90,7 @@ export const NAVIGATION: NavSection[] = [
       { to: '/app/exports', label: 'Exports', icon: 'download', permission: PERMISSIONS.EXPORT_CREATE },
       { to: '/app/audit', label: 'Audit log', icon: 'shield', permission: PERMISSIONS.AUDIT_LOG_VIEW },
       { to: '/app/settings', label: 'Settings', icon: 'cog', permission: PERMISSIONS.SETTINGS_MANAGE },
+      { to: '/app/database', label: 'Database', icon: 'database', permission: PERMISSIONS.SETTINGS_MANAGE },
     ],
   },
 ];
