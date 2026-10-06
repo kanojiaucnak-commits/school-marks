@@ -240,6 +240,33 @@ export async function listSectionRoster(sectionId: string): Promise<Student[]> {
   return camelMany<Student>(data);
 }
 
+/**
+ * Delete one academic year's student record.
+ *
+ * Targets the `students` table itself — `v_students` joins classes and
+ * sections, so PostgREST cannot delete through it. Allowed only where the
+ * `students_delete` RLS policy does (`student:delete`, seeded to admin).
+ *
+ * `marks.student_id` is `ON DELETE CASCADE`, so this row's marks go with it,
+ * while `ocr_results` merely drops its match (`SET NULL`) and the scanned
+ * documents stay. Rows for other years are separate records by design
+ * (Business Rule 10) and are untouched.
+ */
+export async function deleteStudent(id: string): Promise<void> {
+  const { error } = await getSupabase().from('students').delete().eq('id', id);
+  if (error) throw toQueryError(error);
+}
+
+/** How many marks hang off one student row — the delete confirmation quotes it. */
+export async function countStudentMarks(studentId: string): Promise<number> {
+  const { count, error } = await getSupabase()
+    .from('marks')
+    .select('id', { count: 'exact', head: true })
+    .eq('student_id', studentId);
+  if (error) throw toQueryError(error);
+  return count ?? 0;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Helpers                                                                      */
 /* -------------------------------------------------------------------------- */

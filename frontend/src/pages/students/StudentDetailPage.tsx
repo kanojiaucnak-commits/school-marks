@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { PERMISSIONS, type Student } from '@school/shared';
@@ -6,19 +6,29 @@ import { useAuth } from '../../lib/auth';
 import { QueryError, camelMany, toQueryError } from '../../lib/query';
 import { can } from '../../lib/permissions';
 import { getSupabase } from '../../lib/supabase';
-import { getStudent, getStudentHistory, type StudentHistoryRow } from '../../lib/repos/students';
-import { formatDate, formatPercent } from '../../lib/utils';
+import {
+  countStudentMarks,
+  deleteStudent,
+  getStudent,
+  getStudentHistory,
+  type StudentHistoryRow,
+} from '../../lib/repos/students';
+import { formatDate, formatPercent, pluralise } from '../../lib/utils';
 import { Badge, ToneBadge } from '../../components/ui/Badge';
 import { Button, LinkButton } from '../../components/ui/Button';
 import { Card, CardHeader, Table, TBody, TD, TH, THead, TR } from '../../components/ui/Table';
+import { Modal } from '../../components/ui/Modal';
 import { Alert, EmptyState, ErrorState, LoadingState } from '../../components/ui/States';
+import { IconTrash } from '../../components/ui/icons';
+import { useCrudMutation } from '../../components/admin/useCrudMutation';
 
 /**
  * Student record.
  *
  * Shows the current year plus every previous year, which is how year-on-year
  * comparison works: each academic year has its own immutable row, so promoting a
- * student never rewrites the past.
+ * student never rewrites the past. Deleting removes exactly one of those rows —
+ * the confirmation spells out what cascades and what survives.
  */
 export default function StudentDetailPage() {
   const { studentId = '' } = useParams<{ studentId: string }>();
@@ -67,6 +77,26 @@ export default function StudentDetailPage() {
     },
   });
 
+  const canDelete = can(user, PERMISSIONS.STUDENT_DELETE);
+  const [deleting, setDeleting] = useState(false);
+
+  const remove = useCrudMutation<void, string>({
+    mutationFn: deleteStudent,
+    invalidates: [['students']],
+    successMessage: 'Student deleted',
+    onSuccess: () => navigate('/app/students'),
+  });
+
+  /**
+   * The mark count quoted in the confirmation. Fetched only while the dialog is
+   * open, so the common case — reading a record — never pays for it.
+   */
+  const { data: markCount } = useQuery({
+    queryKey: ['students', studentId, 'mark-count'],
+    enabled: deleting && canDelete,
+    queryFn: () => countStudentMarks(studentId),
+  });
+
   if (isLoading) return <LoadingState label="Loading student…" />;
 
   if (error instanceof QueryError) {
@@ -99,6 +129,17 @@ export default function StudentDetailPage() {
             <LinkButton to={`/app/reports?studentId=${record.id}`} size="sm" variant="primary">
               View report
             </LinkButton>
+          )}
+          {canDelete && (
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={<IconTrash size={14} />}
+              onClick={() => setDeleting(true)}
+              aria-label={`Delete ${record.fullName}`}
+            >
+              Delete
+            </Button>
           )}
         </div>
       </header>
@@ -205,6 +246,42 @@ export default function StudentDetailPage() {
         When a student is promoted, a new record is created for the new academic year. Previous years
         keep their original class, section and marks so year-on-year comparisons stay accurate.
       </Alert>
+
+      {/* Delete this year's record — one row, with its marks cascading behind it. */}
+      <Modal
+        open={deleting}
+        onClose={() => setDeleting(false)}
+        title={`Delete ${record.fullName}?`}
+        description={`Record for ${record.academicYearName ?? 'this academic year'} · ${record.className ?? '—'}-${record.sectionName ?? '—'}`}
+        busy={remove.isPending}
+        footer={
+          <>
+            <Button onClick={() => setDeleting(false)} disabled={remove.isPending}>
+              Keep them
+            </Button>
+            <Button
+              variant="danger"
+              loading={remove.isPending}
+              onClick={() => remove.mutate(record.id)}
+            >
+              Delete student
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Alert tone="danger" title="This cannot be undone">
+            {markCount === undefined
+              ? 'Every mark recorded for this record will be deleted with it.'
+              : markCount > 0
+                ? `${pluralise(markCount, 'mark')} recorded for this record will be deleted with it.`
+                : 'No marks are recorded against this record, so only the enrolment row goes.'}{' '}
+            Records for other academic years are separate and stay exactly as they are, and any
+            scanned document matched to this record is unlinked rather than removed.
+          </Alert>
+          {remove.fieldError && <Alert tone="danger">{remove.fieldError}</Alert>}
+        </div>
+      </Modal>
     </div>
   );
 }
