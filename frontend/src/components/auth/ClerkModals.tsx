@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useAuth as useClerkAuth, useClerk } from '@clerk/react';
 import { useNavigate } from 'react-router-dom';
 import { buildUrl } from '../../lib/origin';
 import { SCHOOL } from '../../lib/school';
+import { Crest } from '../ui/Crest';
 
 /**
  * Opens Clerk's sign-in / sign-up UI imperatively.
@@ -142,15 +143,13 @@ function Opener({
       typeof (window as unknown as { Clerk?: unknown }).Clerk !== 'undefined';
 
     return (
-      <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div className="flex min-h-[60vh] w-full items-center justify-center px-4">
+        {/* `w-full` on the wrapper matters: as a flex item of the shell's
+            `<main>` it would otherwise size to its content and collapse this
+            card to a stub instead of honoring the inner `max-w-md`. */}
         <div className="w-full max-w-md rounded-lg border border-line bg-surface p-6 text-center shadow-card">
-          {/* The school name sits on the failure screen too: this is the one
-              moment a user is definitely looking, and it should look like the
-              school's system rather than a generic error card. */}
-          <div className="mb-4">
-            <p className="font-display text-sm font-bold leading-tight text-ink">{SCHOOL.name}</p>
-          </div>
-
+          {/* The shell above carries the school's identity; this card only has
+              to state which step failed and why. */}
           <h1 className="text-lg font-semibold text-ink">{label}</h1>
           {clerkError ? (
             <p className="mt-2 whitespace-pre-line text-sm text-ink-muted">{clerkError}</p>
@@ -180,26 +179,77 @@ function Opener({
   return null;
 }
 
+/**
+ * The page *behind* the sign-in modal.
+ *
+ * Clerk's modal floats over whatever this route renders, and until now the
+ * route rendered nothing: a modal on a blank page. The shell gives that page
+ * the school's identity so the moment of signing in looks like the same system
+ * as everything around it — in the loading state, behind the modal's veil, and
+ * on the failure card alike.
+ *
+ * The layout is dictated by where Clerk's card sits: a ~26rem card, high of
+ * centre, in the horizontal middle of the screen. So the identity goes where a
+ * card never reaches — **top-left**, the same masthead the landing page
+ * carries, plus one quiet line at the bottom edge. The middle stays empty for
+ * the modal (and centred for the loading and failure states, which render with
+ * no modal at all).
+ *
+ * Deliberately passive: no links, no controls, nothing that could compete
+ * with or click through the modal's overlay.
+ */
+function SignInShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col bg-app">
+      {/* Top-left: the corner no centred card reaches, and the same
+          masthead the landing page carries. */}
+      <header className="flex items-center gap-2.5 px-5 pt-5 sm:px-8 sm:pt-7">
+        <Crest size={34} />
+        <div className="min-w-0 text-left">
+          <p className="truncate font-display text-sm font-bold leading-tight text-ink">
+            {SCHOOL.name}
+          </p>
+          <p className="truncate text-2xs font-medium uppercase tracking-[0.08em] text-ink-faint">
+            Marks Management
+          </p>
+        </div>
+      </header>
+
+      {/* The middle belongs to Clerk's modal; the loading and failure states
+          centre here when no modal is open. */}
+      <main className="flex flex-1 items-center justify-center px-4">{children}</main>
+
+      <footer className="px-5 pb-6 text-center sm:pb-8">
+        <p className="text-2xs text-ink-faint">{SCHOOL.location}</p>
+      </footer>
+    </div>
+  );
+}
+
 export function SignInOpener() {
   const clerk = useClerk();
   return (
-    <Opener
-      open={clerk.openSignIn}
-      redirectProp="signInForceRedirectUrl"
-      path="/app"
-      label="Sign in"
-    />
+    <SignInShell>
+      <Opener
+        open={clerk.openSignIn}
+        redirectProp="signInForceRedirectUrl"
+        path="/app"
+        label="Sign in"
+      />
+    </SignInShell>
   );
 }
 
 export function SignUpOpener() {
   const clerk = useClerk();
   return (
-    <Opener
-      open={clerk.openSignUp}
-      redirectProp="signUpForceRedirectUrl"
-      path="/app"
-      label="Create an account"
-    />
+    <SignInShell>
+      <Opener
+        open={clerk.openSignUp}
+        redirectProp="signUpForceRedirectUrl"
+        path="/app"
+        label="Create an account"
+      />
+    </SignInShell>
   );
 }

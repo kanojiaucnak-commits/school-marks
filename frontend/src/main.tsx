@@ -65,7 +65,39 @@ if (!clerkKey || !supabaseUrl || !supabaseKey) {
               `/school-marks` as a prefix; leaving it in makes `/school-marks/` fail
               to match the `/` route. */}
           <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-            <ClerkProvider publishableKey={clerkKey}>
+            <ClerkProvider
+              publishableKey={clerkKey}
+              /*
+                Clerk's modal is the one piece of UI this app does not draw
+                itself, so `appearance.variables` is the only lever on how it
+                presents. Colour and type only — no structural overrides — which
+                is the difference between "Clerk's dialog wearing the school's
+                accent" and a card that clearly belongs to another product.
+                Values mirror the brand tokens in `tailwind.config.js`
+                (brand-600, ink, surface); if those change, change these.
+              */
+              appearance={{
+                variables: {
+                  colorPrimary: '#43616f',
+                  colorForeground: '#1a1813',
+                  colorMutedForeground: '#6f6655',
+                  colorBackground: '#ffffff',
+                  // The veil over our sign-in shell: a warm dark tint rather
+                  // than Clerk's neutral black, so the page behind the modal
+                  // still reads as parchment-under-glass. Alpha form is
+                  // deliberate: the hex form of this variable rendered fully
+                  // opaque and hid the shell entirely.
+                  colorModalBackdrop: 'rgba(46, 42, 33, 0.68)',
+                  // The focus ring around the card, in the brand rather than
+                  // Clerk's default blue — it sits on top of our veil, so an
+                  // off-palette blue is the loudest thing on the page.
+                  colorRing: '#43616f',
+                  borderRadius: '6px',
+                  fontFamily:
+                    'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                },
+              }}
+            >
               {/* Hands Clerk's getToken to the Supabase client before any child
                   query can fire. */}
               <SupabaseTokenBridge />
