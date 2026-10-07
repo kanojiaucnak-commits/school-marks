@@ -3,15 +3,19 @@ import react from '@vitejs/plugin-react';
 import { fileURLToPath, URL } from 'node:url';
 
 /**
- * Deployment target: GitHub Pages.
+ * Deployment target: GitHub Pages by default; Vercel when `VERCEL` is set.
  *
- * `base` must include the repository name, because Pages serves every project
- * from `https://<user>.github.io/<repo>/`. A wrong base produces a page that
- * loads and then 404s on its own JS and CSS.
+ * `base` prefixes every asset URL in the built HTML. A wrong base produces a
+ * page that loads and then 404s on its own JS and CSS — which is exactly how
+ * the first Vercel deployment broke: Pages serves from `/<repo>/`, Vercel
+ * serves from the domain root, and one value cannot satisfy both.
  *
- * Set to '/' for a custom domain or a local-only build.
+ * Resolution order: an explicit `VITE_BASE_PATH` always wins (the escape
+ * hatch), then the `VERCEL` variable every Vercel build injects, then the
+ * Pages default.
  */
-const BASE = process.env.VITE_BASE_PATH ?? '/school-marks/';
+const BASE =
+  process.env.VITE_BASE_PATH ?? (process.env.VERCEL ? '/' : '/school-marks/');
 
 export default defineConfig({
   base: BASE,
