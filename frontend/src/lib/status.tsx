@@ -188,6 +188,10 @@ export const OCR_STATUS_MAP: Record<string, StatusDescriptor> = {
  * `AMBIGUOUS` and `NONE` get their own descriptors rather than sharing
  * "unmatched", because the required action differs: an ambiguous row needs a
  * choice between named candidates, an unmatched row needs a search.
+ *
+ * `student_id` is legacy: `matchRow` no longer identifies a student from their
+ * student or admission number, but rows matched before that rule changed are
+ * still readable here rather than falling through to "Not matched".
  */
 export const OCR_MATCH_MAP: Record<string, StatusDescriptor & { needsHuman: boolean }> = {
   student_id: {

@@ -144,6 +144,13 @@ export function confidenceBand(confidence: number): 'high' | 'medium' | 'low' {
 }
 
 export const OCR_MATCH_METHOD = {
+  /**
+   * Legacy only. The matcher stopped identifying students by student or
+   * admission number (roll number and name are the only identities now), but
+   * rows written before that change still carry it and the column's CHECK
+   * constraint still allows it — so the value stays in the vocabulary the UI
+   * reads.
+   */
   STUDENT_ID: 'student_id',
   ROLL_NUMBER: 'roll_number',
   NORMALIZED_NAME: 'normalized_name',

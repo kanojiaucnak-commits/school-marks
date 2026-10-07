@@ -14,8 +14,9 @@ import {
  * Structure mirrors the retired implementation:
  *
  *   provider  → calls a vendor API and returns normalised pages of words + boxes
- *   parser    → groups words into lines and reads name / number / marks
- *   matcher   → resolves each line to a student on the roster
+ *   parser    → groups words into lines and reads name / code / marks
+ *   matcher   → resolves each line to a student on the roster, from the sheet's
+ *               roll number and name only (never the student or admission number)
  *   persist   → writes `ocr_results` and updates the document's status
  *
  * ── On provider failure ───────────────────────────────────────────────────────
@@ -192,26 +193,25 @@ Deno.serve(
           );
         }
 
-        // The roster tells the matcher which student numbers and roll numbers to
-        // expect, which materially improves accuracy.
+        // The roster tells the matcher which roll numbers and names to expect,
+        // which materially improves accuracy. Student and admission numbers are
+        // deliberately not fetched — the sheet identifies a student by roll
+        // number or name only, so anything else here would tempt the matcher
+        // back into an identifier rule that no longer exists.
         const { data: roster } = await caller.supabase
           .from('v_students')
-          .select('id, student_number, admission_number, roll_number, full_name, normalized_name')
+          .select('id, roll_number, full_name, normalized_name')
           .eq('section_id', document.section_id)
           .eq('academic_year_id', document.academic_year_id)
           .eq('status', 'active');
 
         const candidates = ((roster ?? []) as Array<{
           id: string;
-          student_number: string;
-          admission_number: string | null;
           roll_number: number | null;
           full_name: string;
           normalized_name: string;
         }>).map((r) => ({
           id: r.id,
-          studentNumber: r.student_number,
-          admissionNumber: r.admission_number ?? '',
           rollNumber: r.roll_number,
           fullName: r.full_name,
           normalizedName: r.normalized_name,
@@ -812,8 +812,6 @@ function unionBox(words: OcrWord[]): { x: number; y: number; width: number; heig
 
 interface Candidate {
   id: string;
-  studentNumber: string;
-  admissionNumber: string;
   rollNumber: number | null;
   fullName: string;
   normalizedName: string;
@@ -821,13 +819,19 @@ interface Candidate {
 
 interface MatchedLine extends ParsedLine {
   matchedStudentId: string | null;
-  matchMethod: 'student_id' | 'roll_number' | 'normalized_name' | 'fuzzy_name' | 'manual' | 'none';
+  matchMethod: 'roll_number' | 'normalized_name' | 'fuzzy_name' | 'manual' | 'none';
   matchConfidence: number | null;
   matchCandidates: string[] | null;
 }
 
 /**
  * Resolve a line to a student.
+ *
+ * Identity comes from the sheet's roll number and its name, in that order —
+ * the student number and admission number are *not* identifiers here, even
+ * when a scan happens to carry them. A row that reads as an alphanumeric code
+ * the roster does not have a roll number for falls through to the name rules
+ * rather than being force-fitted onto a student number.
  *
  * Never auto-assigns an ambiguous row: when the top two candidates are within
  * AMBIGUITY_MARGIN the result is `none` with the candidates attached, and a human
@@ -845,18 +849,7 @@ function matchRow(line: ParsedLine, candidates: Candidate[]): MatchedLine {
 
   if (candidates.length === 0) return base;
 
-  // 1. Exact identifier.
-  if (line.detectedIdentifier) {
-    const identifier = line.detectedIdentifier.toLowerCase();
-    const exact = candidates.find(
-      (c) =>
-        c.studentNumber.toLowerCase() === identifier ||
-        (c.admissionNumber && c.admissionNumber.toLowerCase() === identifier),
-    );
-    if (exact) return { ...base, matchedStudentId: exact.id, matchMethod: 'student_id', matchConfidence: 1 };
-  }
-
-  // 2. Roll number.
+  // 1. Roll number.
   const numeric = line.detectedMarks === null ? null : Number(line.detectedMarks);
   if (line.detectedIdentifier && /^\d+$/.test(line.detectedIdentifier)) {
     const roll = Number(line.detectedIdentifier);
@@ -865,14 +858,14 @@ function matchRow(line: ParsedLine, candidates: Candidate[]): MatchedLine {
   }
   void numeric;
 
-  // 3. Normalised name equality.
+  // 2. Normalised name equality.
   if (line.detectedName) {
     const target = normalizeName(line.detectedName);
     const exact = candidates.find((c) => c.normalizedName === target);
     if (exact) return { ...base, matchedStudentId: exact.id, matchMethod: 'normalized_name', matchConfidence: 1 };
   }
 
-  // 4. Fuzzy name, with an ambiguity check.
+  // 3. Fuzzy name, with an ambiguity check.
   if (line.detectedName) {
     const scored = candidates
       .map((candidate) => ({
