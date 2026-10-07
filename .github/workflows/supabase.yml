@@ -1,0 +1,97 @@
+# ---------------------------------------------------------------------------
+# Deploy the Supabase schema and Edge Functions
+#
+# Deliberately separate from `deploy.yml`. That workflow used to do all three
+# jobs — GitHub Pages, `db push`, `functions deploy` — and was disabled when
+# DNS moved to Vercel and the Pages deploy became redundant. Disabling it took
+# the Supabase deploys down with it, which is the failure mode this file exists
+# to prevent: a migration committed here would sit unapplied and an Edge
+# Function edit would sit undeployed, with nothing failing to say so.
+#
+# GitHub Pages is *not* re-enabled here. Vercel serves the frontend; anything
+# this workflow publishes to Pages would be a second site no DNS points at.
+#
+# Secrets are repository secrets (Settings → Secrets and variables → Actions):
+# SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_ID, SUPABASE_DB_PASSWORD. All three
+# were already in place from the original workflow.
+# ---------------------------------------------------------------------------
+name: Deploy Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      # Running the workflow file against itself is what makes editing it
+      # testable: a change to these steps deploys once, so a broken step is
+      # seen on this push rather than on the next schema change.
+      - '.github/workflows/supabase.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time. Never cancel a run midway: an interrupted
+# `db push` or `functions deploy` leaves production half-updated, and a queued
+# run is strictly better than a concurrent one.
+concurrency:
+  group: supabase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # These are the repo's gates, and they gate the Supabase deploy too.
+      # `shared` tests are the load-bearing part: `permissions.seed.test.ts`
+      # scans every migration and asserts the SQL permission grants match the
+      # TypeScript constants, which is the check that matters *before* `db push`
+      # puts a policy into production. Nothing else would catch that until a
+      # real user hit a missing permission.
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link to the project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+
+      # `db push` applies only migrations that are not yet recorded in the
+      # remote `supabase_migrations` table, so this is safe to run on every
+      # push. It will not re-run a migration that has already been applied,
+      # which is what makes it idempotent enough for CI rather than something
+      # that has to be run by hand exactly once.
+      - name: Apply database migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+
+      # `--no-verify-jwt` is required, not an optimisation. These functions
+      # authenticate with Clerk session tokens, but the Supabase gateway only
+      # understands tokens signed with the project's own JWT secret, so with
+      # gateway verification on it rejects every request with a bare 401 before
+      # any function code runs. Each function verifies the Clerk token itself in
+      # `_shared/auth.ts` — real signature validation against Clerk's JWKS.
+      - name: Deploy Edge Functions
+        run: supabase functions deploy --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
