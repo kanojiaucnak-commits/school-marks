@@ -1,7 +1,17 @@
+import { Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { LinkButton } from '../components/ui/Button';
 import { Crest } from '../components/ui/Crest';
+
+/**
+ * Loaded through React.lazy on purpose: a static import would fold the whole
+ * Three.js renderer into the entry bundle (it did — 644 kB against 125 kB), and
+ * the landing page is the one surface every visitor downloads on a school
+ * connection. Split out, the scene arrives after first paint and the copy never
+ * waits for a graphics library.
+ */
+const HeroScene = lazy(() => import('../components/landing/HeroScene'));
 import { SCHOOL } from '../lib/school';
 import {
   IconCheck,
@@ -124,8 +134,19 @@ export function HomePage() {
       {/* ---------------------------------------------------------------- */}
       {/* Hero                                                            */}
       {/* ---------------------------------------------------------------- */}
-      <section className="border-b border-line-soft bg-surface">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+      <section className="relative overflow-hidden border-b border-line-soft bg-surface">
+        {/*
+          Ambient scene behind the hero: slate particles and the crest's ring,
+          aria-hidden and pointer-events-free. Rendered first in document order
+          so the copy below paints over it without needing a z-index, and
+          `overflow-hidden` keeps the parallax from reaching the page scroll.
+          The scene refuses to run when the hero is off screen, the tab is
+          hidden, or the visitor prefers reduced motion — see HeroScene.
+        */}
+        <Suspense fallback={null}>
+          <HeroScene className="pointer-events-none absolute inset-0" />
+        </Suspense>
+        <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
           {/*
             Two columns on wide screens: the promise on the left, the artefact
             it makes on the right. The figure is `aria-hidden` because every
