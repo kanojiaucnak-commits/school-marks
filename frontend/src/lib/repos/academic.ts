@@ -17,7 +17,7 @@ import type {
   CreateSubjectInput,
 } from '@school/shared';
 import { getSupabase } from '../supabase';
-import { camel, camelMany, paginate, QueryError, rpc, toQueryError, type ListParams, type ListResponse, type Row } from '../query';
+import { camel, camelMany, insertRow, paginate, QueryError, rpc, toQueryError, type ListParams, type ListResponse, type Row } from '../query';
 
 /**
  * Academic structure.
@@ -73,29 +73,6 @@ export interface AssignmentRequest {
 /* -------------------------------------------------------------------------- */
 /* Shared row helpers                                                          */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Insert one row and return it.
- *
- * Postgres reports a uniqueness violation as `23505` with the colliding index in
- * `detail`, but the message alone is "duplicate key value violates unique
- * constraint" — it never says which field. Naming the column is the difference
- * between a user fixing the form and a user filing a bug.
- */
-async function insertRow<T>(table: string, row: Row): Promise<T> {
-  const { data, error } = await getSupabase().from(table).insert(row).select().single();
-
-  if (error) {
-    if (error.code === '23505') {
-      const key = error.details?.match(/Key \(([^)]+)\)/)?.[1]?.replace(/_/g, ' ') ?? 'value';
-      throw new QueryError('23505', `That ${key} is already in use.`, error.details);
-    }
-    throw toQueryError(error);
-  }
-
-  // `.single()` succeeded, so there is exactly one row.
-  return camel<T>(data)!;
-}
 
 /** camelCase patch object → snake_case row object, dropping undefined. */
 function toPatchRow(patch: Row): Row {

@@ -88,6 +88,10 @@ export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 const TEACHER_PERMISSIONS: Permission[] = [
   PERMISSIONS.USER_UPDATE, // own profile only — scope enforced separately
   PERMISSIONS.STUDENT_VIEW,
+  // Enrol a mid-year joiner. The permission alone would allow any section, so
+  // `students_insert` additionally requires the target section to be one the
+  // teacher is assigned to or teaches (see 0023_teacher_student_create.sql).
+  PERMISSIONS.STUDENT_CREATE,
   PERMISSIONS.MARKS_VIEW_ASSIGNED,
   PERMISSIONS.MARKS_EDIT,
   PERMISSIONS.MARKS_SUBMIT,

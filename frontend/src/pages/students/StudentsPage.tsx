@@ -1,24 +1,30 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
 import {
   PERMISSIONS,
+  createStudentSchema,
   type ClassSectionRef,
+  type CreateStudentInput,
   type Student,
 } from '@school/shared';
 import { useAuth } from '../../lib/auth';
 import { QueryError } from '../../lib/query';
 import { can } from '../../lib/permissions';
 import { formatDate, pluralise } from '../../lib/utils';
-import { listClassSections } from '../../lib/repos/academic';
+import { listAssignments, listClassSections, listClasses } from '../../lib/repos/academic';
 import { downloadFromUrl, downloadStudentExport } from '../../lib/repos/storage';
-import { listStudents } from '../../lib/repos/students';
+import { createStudent, listStudents } from '../../lib/repos/students';
 import { Badge } from '../../components/ui/Badge';
 import { Button, LinkButton } from '../../components/ui/Button';
-import { Select } from '../../components/ui/Field';
+import { Select, TextInput } from '../../components/ui/Field';
+import { Modal } from '../../components/ui/Modal';
 import { Card, Pagination, Table, TBody, TD, TH, THead, TR } from '../../components/ui/Table';
 import { Alert, EmptyState, ErrorState, LoadingState } from '../../components/ui/States';
 import { useToast } from '../../components/ui/Toast';
+import { useCrudMutation } from '../../components/admin/useCrudMutation';
 import { useAcademicYears } from '../../hooks/useAcademicYears';
 import { useListQuery, type ListParams } from '../../hooks/useListQuery';
 import { IconDownload, IconPlus, IconUsers } from '../../components/ui/icons';
@@ -34,6 +40,10 @@ export default function StudentsPage() {
   const { user } = useAuth();
   const { success, error: errorToast } = useToast();
   const [exporting, setExporting] = useState(false);
+  const [adding, setAdding] = useState(false);
+
+  const canCreate = can(user, PERMISSIONS.STUDENT_CREATE);
+  const canSeeAll = can(user, PERMISSIONS.STUDENT_VIEW_ALL);
 
   const { data: yearsData } = useAcademicYears();
   const [academicYearId, setAcademicYearId] = useState('');
@@ -84,6 +94,17 @@ export default function StudentsPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {canCreate && (
+            <Button
+              variant="primary"
+              size="sm"
+              icon={<IconPlus size={16} />}
+              disabled={!currentYearId}
+              onClick={() => setAdding(true)}
+            >
+              Add student
+            </Button>
+          )}
           {can(user, PERMISSIONS.STUDENT_EXPORT) && (
             <>
               <Button
@@ -194,10 +215,28 @@ export default function StudentsPage() {
               }
               icon={<IconUsers size={18} />}
               action={
-                can(user, PERMISSIONS.STUDENT_IMPORT) ? (
-                  <LinkButton to="/app/students/import" variant="primary" icon={<IconPlus size={16} />}>
-                    Import students
-                  </LinkButton>
+                canCreate || can(user, PERMISSIONS.STUDENT_IMPORT) ? (
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {canCreate && (
+                      <Button
+                        variant="primary"
+                        icon={<IconPlus size={16} />}
+                        disabled={!currentYearId}
+                        onClick={() => setAdding(true)}
+                      >
+                        Add student
+                      </Button>
+                    )}
+                    {can(user, PERMISSIONS.STUDENT_IMPORT) && (
+                      <LinkButton
+                        to="/app/students/import"
+                        variant={canCreate ? 'secondary' : 'primary'}
+                        icon={<IconPlus size={16} />}
+                      >
+                        Import students
+                      </LinkButton>
+                    )}
+                  </div>
                 ) : undefined
               }
             />
@@ -273,6 +312,15 @@ export default function StudentsPage() {
           </>
         )}
       </Card>
+
+      {adding && currentYearId && (
+        <AddStudentDialog
+          onClose={() => setAdding(false)}
+          academicYearId={currentYearId}
+          canSeeAll={canSeeAll}
+          teacherId={user?.id}
+        />
+      )}
     </div>
   );
 }
@@ -285,4 +333,267 @@ function useClassSections(academicYearId: string) {
     enabled: Boolean(academicYearId),
     staleTime: 5 * 60_000,
   });
+}
+
+/* -------------------------------------------------------------------------- */
+/* Add student dialog                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** An empty text input becomes `NULL`, so optional columns do not fill with `''`. */
+const blankToNull = (value: string): string | null => {
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+};
+
+/**
+ * Enrol one student by hand, for a mid-year joiner the import is not worth it for.
+ *
+ * The section picker mirrors `students_insert` rather than consulting a separate
+ * rule: an admin or reviewer (`student:view_all`) may file a student into any
+ * section of the year, a teacher only into one they hold an assignment for or
+ * class-teach. Offering exactly that set is the whole point — anything wider is
+ * a button that ends in a write the database refuses, anything narrower hides a
+ * section it would have accepted.
+ *
+ * Mounted only while open. `academicYearId` arrives as context rather than as
+ * something the user types, so the form has to be seeded with it on each open
+ * rather than once at page load, before the years have even resolved.
+ */
+function AddStudentDialog({
+  onClose,
+  academicYearId,
+  canSeeAll,
+  teacherId,
+}: {
+  onClose: () => void;
+  academicYearId: string;
+  canSeeAll: boolean;
+  teacherId: string | undefined;
+}) {
+  // Keyed as `ClassesPage` keys it, so a section list already fetched is reused.
+  const { data: programs, error: programsError, isPending: programsPending } = useQuery({
+    queryKey: ['classes', academicYearId],
+    queryFn: () => listClasses(academicYearId),
+    staleTime: 5 * 60_000,
+  });
+
+  // Keyed as `MarksEntryPage` keys it, for the same reason.
+  const { data: assignments, isPending: assignmentsPending } = useQuery({
+    queryKey: ['assignments', 'mine', academicYearId],
+    queryFn: () => listAssignments({ academicYearId, teacherId: teacherId! }),
+    enabled: !canSeeAll && Boolean(academicYearId && teacherId),
+    staleTime: 5 * 60_000,
+  });
+
+  // A disabled query reports `isPending` forever, so it only counts while it is
+  // actually going to run. Without this the dialog would spend its first frame
+  // telling an admin that this year has no classes.
+  const loadingSections =
+    programsPending || (!canSeeAll && assignmentsPending && Boolean(teacherId));
+
+  const assignable = useMemo(() => {
+    const assigned = new Set((assignments ?? []).map((row) => row.sectionId));
+    const classes = programs?.classes ?? [];
+    const classNameOf = (classId: string) =>
+      classes.find((row) => row.id === classId)?.name ?? '?';
+
+    const rows = (programs?.sections ?? [])
+      .filter(
+        (section) =>
+          canSeeAll || assigned.has(section.id) || section.classTeacherId === teacherId,
+      )
+      .map((section) => ({
+        classId: section.classId,
+        sectionId: section.id,
+        className: classNameOf(section.classId),
+        sectionName: section.name,
+      }));
+
+    // Numeric so "Class 10" sorts before "Class 9".
+    return rows.sort(
+      (a, b) =>
+        a.className.localeCompare(b.className, undefined, { numeric: true }) ||
+        a.sectionName.localeCompare(b.sectionName),
+    );
+  }, [programs, assignments, canSeeAll, teacherId]);
+
+  const create = useCrudMutation<Student, CreateStudentInput>({
+    mutationFn: (values) => createStudent(values),
+    invalidates: [['students'], ['class-sections']],
+    successMessage: 'Student added',
+    onSuccess: () => onClose(),
+  });
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+  } = useForm<CreateStudentInput>({
+    resolver: zodResolver(createStudentSchema),
+    defaultValues: {
+      fullName: '',
+      studentNumber: '',
+      admissionNumber: null,
+      rollNumber: null,
+      dateOfBirth: null,
+      gender: null,
+      classId: '',
+      sectionId: '',
+      academicYearId,
+      guardianName: null,
+      guardianPhone: null,
+      guardianEmail: null,
+      address: null,
+      status: 'active',
+    },
+  });
+
+  const sectionField = register('sectionId');
+  const classIdFor = (sectionId: string) =>
+    assignable.find((row) => row.sectionId === sectionId)?.classId ?? '';
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Add a student"
+      description="Enrols one student into a class for the academic year shown in the page filters."
+      busy={create.isPending}
+      footer={
+        <>
+          <Button onClick={onClose} disabled={create.isPending}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            loading={create.isPending}
+            disabled={loadingSections || assignable.length === 0}
+            onClick={handleSubmit((values) => create.mutate(values))}
+          >
+            Add student
+          </Button>
+        </>
+      }
+    >
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleSubmit((values) => create.mutate(values))();
+        }}
+      >
+        {create.fieldError && <Alert tone="danger">{create.fieldError}</Alert>}
+
+        {programsError instanceof QueryError && (
+          <Alert tone="danger">{programsError.userMessage}</Alert>
+        )}
+
+        {!programsError && !loadingSections && assignable.length === 0 && (
+          <Alert tone="info">
+            {canSeeAll
+              ? 'This academic year has no classes yet, so there is nowhere to enrol a student.'
+              : 'You are not assigned to any section yet, so there is nowhere to enrol a student.'}
+          </Alert>
+        )}
+
+        <TextInput
+          label="Full name"
+          autoComplete="name"
+          error={errors.fullName?.message}
+          {...register('fullName')}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextInput
+            label="Student ID"
+            hint="Letters, numbers and hyphens. Unique within the academic year."
+            error={errors.studentNumber?.message}
+            {...register('studentNumber')}
+          />
+          <TextInput
+            label="Roll number"
+            type="number"
+            hint="Unique within the section."
+            error={errors.rollNumber?.message}
+            {...register('rollNumber', {
+              setValueAs: (value: string) => (value.trim() === '' ? null : Number(value)),
+            })}
+          />
+        </div>
+
+        <Select
+          label="Class & section"
+          required
+          placeholder={
+            loadingSections
+              ? 'Loading sections…'
+              : assignable.length === 0
+                ? 'No section is available to you'
+                : 'Choose a class and section'
+          }
+          disabled={loadingSections || assignable.length === 0}
+          options={assignable.map((row) => ({
+            value: row.sectionId,
+            label: `Section ${row.sectionName}`,
+            group: `Class ${row.className}`,
+          }))}
+          error={errors.sectionId?.message ?? errors.classId?.message}
+          {...sectionField}
+          onChange={(event) => {
+            sectionField.onChange(event);
+            // The schema wants the class as a column of its own, but it is
+            // implied by the section — so it is filled in here rather than
+            // asking for the same thing twice.
+            setValue('classId', classIdFor(event.target.value));
+          }}
+        />
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextInput
+            label="Date of birth"
+            type="date"
+            error={errors.dateOfBirth?.message}
+            {...register('dateOfBirth', {
+              setValueAs: (value: string) => (value === '' ? null : value),
+            })}
+          />
+          <Select
+            label="Gender"
+            placeholder="Not stated"
+            options={[
+              { value: 'male', label: 'Male' },
+              { value: 'female', label: 'Female' },
+              { value: 'other', label: 'Other' },
+            ]}
+            error={errors.gender?.message}
+            {...register('gender', { setValueAs: (value: string) => (value === '' ? null : value) })}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextInput
+            label="Guardian name (optional)"
+            autoComplete="name"
+            error={errors.guardianName?.message}
+            {...register('guardianName', { setValueAs: blankToNull })}
+          />
+          <TextInput
+            label="Guardian phone (optional)"
+            type="tel"
+            autoComplete="tel"
+            error={errors.guardianPhone?.message}
+            {...register('guardianPhone', { setValueAs: blankToNull })}
+          />
+        </div>
+
+        <TextInput
+          label="Admission number (optional)"
+          error={errors.admissionNumber?.message}
+          {...register('admissionNumber', { setValueAs: blankToNull })}
+        />
+      </form>
+    </Modal>
+  );
 }

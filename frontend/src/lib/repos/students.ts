@@ -1,11 +1,13 @@
-import type { Student, StudentStatus } from '@school/shared';
+import { normalizeName, type CreateStudentInput, type Student, type StudentStatus } from '@school/shared';
 import { getSupabase } from '../supabase';
 import {
   applySearch,
   camel,
   camelMany,
+  insertRow,
   orSearch,
   paginate,
+  QueryError,
   toQueryError,
   type ListParams,
   type ListResponse,
@@ -238,6 +240,67 @@ export async function listSectionRoster(sectionId: string): Promise<Student[]> {
 
   if (error) throw toQueryError(error);
   return camelMany<Student>(data);
+}
+
+/**
+ * Enrol one student into a section.
+ *
+ * The only write path that runs as the signed-in user: the CSV/Excel import
+ * uses the service role and so never sees a policy. That makes this the place
+ * where the `students_insert` gate is actually exercised — a teacher may only
+ * insert into a section they are assigned to or teach (0023), and a refusal
+ * arrives as a `42501`, which `toQueryError` renders as a permission message
+ * rather than a crash.
+ *
+ * `normalized_name` has no trigger behind it (0016), so every write path must
+ * supply it or the insert dies on NOT NULL. It has to match
+ * `public.normalize_name()` exactly: a divergence is invisible here and only
+ * shows up later as OCR quietly failing to recognise the student.
+ */
+export async function createStudent(input: CreateStudentInput): Promise<Student> {
+  try {
+    return await insertRow<Student>('students', {
+      academic_year_id: input.academicYearId,
+      class_id: input.classId,
+      section_id: input.sectionId,
+      student_number: input.studentNumber,
+      admission_number: input.admissionNumber || null,
+      roll_number: input.rollNumber ?? null,
+      full_name: input.fullName,
+      normalized_name: normalizeName(input.fullName),
+      date_of_birth: input.dateOfBirth || null,
+      gender: input.gender ?? null,
+      guardian_name: input.guardianName || null,
+      guardian_phone: input.guardianPhone || null,
+      guardian_email: input.guardianEmail || null,
+      address: input.address || null,
+      status: input.status ?? 'active',
+    });
+  } catch (error) {
+    if (!(error instanceof QueryError) || !error.isConflict) throw error;
+
+    // `students` carries three unique constraints, and each means something
+    // different to the person filling in the form — "That value is already in
+    // use" would send them checking the academic year when the field that
+    // collided is the student ID. The pooler drops `detail` for a duplicate
+    // key, so the columns are read when present and the constraint name in the
+    // raw message when they are not.
+    const text = `${typeof error.details === 'string' ? error.details : ''}\n${error.rawMessage ?? ''}`;
+
+    const collisions: Array<[RegExp, string]> = [
+      [/student_number/, 'That student ID is already in use in this academic year.'],
+      [/roll_number|section_roll/, 'That roll number is already taken in this section.'],
+      [/admission_number/, 'That admission number is already in use.'],
+    ];
+
+    for (const [pattern, message] of collisions) {
+      if (pattern.test(text)) {
+        throw new QueryError('23505', message, error.details, error.hint, error.rawMessage);
+      }
+    }
+
+    throw error;
+  }
 }
 
 /**

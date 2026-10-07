@@ -351,6 +351,46 @@ export function toNumber(value: unknown, fallback = 0): number {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Writes                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Insert one row and return it, camelCased.
+ *
+ * Postgres reports a uniqueness violation as `23505` with the colliding index in
+ * `detail`, but the message alone is "duplicate key value violates unique
+ * constraint" — it never says which field. Naming the column is the difference
+ * between a user fixing the form and a user filing a bug, so the mapping lives
+ * here rather than being repeated by every repo that can create a row.
+ *
+ * Lives in `query.ts` rather than in one of the domain repos because it is
+ * generic: it names a table and a row, and knows nothing about either.
+ */
+export async function insertRow<T>(table: string, row: Row): Promise<T> {
+  const { data, error } = await getSupabase().from(table).insert(row).select().single();
+
+  if (error) {
+    if (error.code === '23505') {
+      const key = error.details?.match(/Key \(([^)]+)\)/)?.[1]?.replace(/_/g, ' ') ?? 'value';
+      throw new QueryError(
+        '23505',
+        `That ${key} is already in use.`,
+        error.details,
+        error.hint,
+        // Kept like `toQueryError` keeps it: `details` is dropped by the pooler
+        // for a duplicate key, and without the original text `fieldIssues` has
+        // nothing to name the offending column from.
+        error.message,
+      );
+    }
+    throw toQueryError(error);
+  }
+
+  // `.single()` succeeded, so there is exactly one row.
+  return camel<T>(data)!;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Builders                                                                     */
 /* -------------------------------------------------------------------------- */
 
