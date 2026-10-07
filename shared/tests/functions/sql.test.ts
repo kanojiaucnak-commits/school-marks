@@ -329,7 +329,10 @@ describe('embedded resources', () => {
       columns: 'id, profiles:profiles!teacher_id(full_name, email)',
     });
 
-    expect(built.sql).toContain('where "profiles"."teacher_id" = "assignment_requests"."id"');
+    // The foreign key is on `assignment_requests`, so the subquery compares the
+    // parent's column against the target's `id` — not the other way round, which
+    // would ask for a `profiles.teacher_id` that does not exist.
+    expect(built.sql).toContain('where "assignment_requests"."teacher_id" = "profiles"."id"');
     expect(built.sql).toContain('as "profiles"');
   });
 
@@ -346,6 +349,7 @@ describe('embedded resources', () => {
       columns: 'id, subjects:subjects!subject_id(name)',
     });
     expect(built.sql).toContain('as "subjects"');
+    expect(built.sql).toContain('where "assignment_requests"."subject_id" = "subjects"."id"');
   });
 
   it('rejects an embedded target that is not a relation', async () => {

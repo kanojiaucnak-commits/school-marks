@@ -166,6 +166,11 @@ async function buildSelectList(
        * `profiles` links from `teacher_id`, not `profile_id`, and
        * `teacher_assignments` from `subject_id`. So the caller states it with
        * PostgREST's `!column` syntax, and the guess is only a fallback.
+       *
+       * The column belongs to the relation being selected *from* — the same one
+       * the validation above checked — and is compared against the target's `id`.
+       * Reading it the other way round emits `profiles.teacher_id`, which does
+       * not exist, for every many-to-one embed this schema has.
        */
       const linkColumn = explicitLink ?? `${table.replace(/s$/, '')}_id`;
       if (!relation.columns.has(linkColumn)) {
@@ -178,7 +183,7 @@ async function buildSelectList(
 
       parts.push(
         `(select ${subColumns} from ${quoteIdent(table)} ` +
-          `where ${quoteIdent(table)}.${quoteIdent(linkColumn)} = ${quoteIdent(relation.name)}.${quoteIdent('id')}) as ${quoteIdent(alias)}`,
+          `where ${quoteIdent(relation.name)}.${quoteIdent(linkColumn)} = ${quoteIdent(table)}.${quoteIdent('id')}) as ${quoteIdent(alias)}`,
       );
       continue;
     }

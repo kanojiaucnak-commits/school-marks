@@ -442,15 +442,20 @@ export async function deleteAssignment(id: string): Promise<void> {
 /**
  * Everything an approver needs to judge a request, in one row.
  *
- * `teacher_id` references `profiles(id)`, which holds the Clerk user id, so the
- * embed is explicit rather than inferred.
+ * Each embed is written `alias:relation!link_column(cols)`: the middle term is
+ * the table being joined to and the last is the column on *this* table that
+ * reaches it. Writing `academic_years:academic_year_id ( name )` instead — the
+ * link column where the relation belongs — is what produced
+ * `Unknown relation "academic_year_id"`, because the parser reads group two as
+ * a relation name. Every one is stated explicitly rather than left to the
+ * singularisation guess, the same reason `profiles` uses `!teacher_id`.
  */
 const REQUEST_SELECT = `
   *,
-  academic_years:academic_year_id ( name ),
-  classes:class_id ( name ),
-  sections:section_id ( name ),
-  subjects:subject_id ( name ),
+  academic_years:academic_years!academic_year_id ( name ),
+  classes:classes!class_id ( name ),
+  sections:sections!section_id ( name ),
+  subjects:subjects!subject_id ( name ),
   profiles:profiles!teacher_id ( full_name, email )
 `;
 
