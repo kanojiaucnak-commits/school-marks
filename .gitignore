@@ -62,6 +62,6 @@ coverage/
 
 # Misc
 .cache/
-tmp/.vercel
+tmp/
 .vercel
 .env*
