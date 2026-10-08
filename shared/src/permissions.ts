@@ -128,25 +128,23 @@ const REVIEWER_PERMISSIONS: Permission[] = [
 ];
 
 /**
- * Admin holds everything except `assignment:request`.
- *
- * This used to be `Object.values(PERMISSIONS)`, on the assumption that admin is
- * all-powerful. That assumption is now wrong in a way that would have failed
- * silently: an admin could ask for classes to be taught, which is meaningless
- * because `assignment:manage` already lets them assign anyone to anything
- * directly. Listing the permissions out means the exception is visible in a
- * review instead of hiding in an invariant.
- */
-/**
  * Permissions deliberately withheld from the admin role.
  *
- * Admin holds every permission except these. The list is exported so the
- * seed-parity test can assert the same exception instead of the old blanket
- * "admin has everything" rule, which no longer holds.
+ * Admin holds every permission in the catalogue, and this list is why that is
+ * written down rather than assumed: it used to be `Object.values(PERMISSIONS)`,
+ * which buried the one exception that existed instead of surfacing it in review.
+ *
+ * That exception was `assignment:request`, held on the grounds that asking to
+ * teach is meaningless when `assignment:manage` already assigns people directly.
+ * It went away in 0026 once the administrator also teaches: `request_assignment`
+ * refuses the call without it, so the form on `My classes` accepted their input
+ * and then failed at the server.
+ *
+ * It stays exported — empty — because the seed-parity test reads this list to
+ * work out what admin should hold, so the mechanism survives the next time an
+ * exemption is genuinely warranted.
  */
-export const ADMIN_PERMISSION_EXEMPTIONS: readonly Permission[] = [
-  PERMISSIONS.ASSIGNMENT_REQUEST,
-];
+export const ADMIN_PERMISSION_EXEMPTIONS: readonly Permission[] = [];
 
 const ADMIN_PERMISSIONS: Permission[] = Object.values(PERMISSIONS).filter(
   (permission) => !ADMIN_PERMISSION_EXEMPTIONS.includes(permission),

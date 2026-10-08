@@ -141,10 +141,9 @@ describe('permission seed parity', () => {
 
   it('gives no non-admin role a permission admin lacks', () => {
     // "An admin can always do anything a lesser role can" is a support-friendly
-    // invariant: an admin must never be the reason a user is stuck. It has one
-    // declared exception. `assignment:request` is not a capability admin is
-    // missing — it is a self-service action that `assignment:manage` strictly
-    // supersedes, since an admin assigns people directly instead of asking.
+    // invariant: an admin must never be the reason a user is stuck. The exemption
+    // list below exists so that if it is ever broken it is broken on purpose and
+    // named, rather than discovered by somebody stuck behind a button.
     const adminSeeded = new Set(seeded.get(ROLE_IDS[ROLES.ADMIN]) ?? []);
     const exempt = new Set<string>(ADMIN_PERMISSION_EXEMPTIONS);
 
@@ -160,9 +159,11 @@ describe('permission seed parity', () => {
     }
   });
 
-  it('holds no more than one admin exemption, so the invariant stays meaningful', () => {
-    // If the exemption list grows, admins quietly stop being all-powerful and the
-    // test above stops catching much. Force that to be a deliberate decision.
-    expect(ADMIN_PERMISSION_EXEMPTIONS.length).toBeLessThanOrEqual(1);
+  it('keeps admin all-powerful, so the invariant stays meaningful', () => {
+    // Every exemption shrinks the guarantee the test above makes, so the list is
+    // held empty: 0026 granted admin the last one it contained. If that ever has
+    // to change, the reason belongs in ADMIN_PERMISSION_EXEMPTIONS itself, and
+    // this assertion is what forces somebody to write it there.
+    expect(ADMIN_PERMISSION_EXEMPTIONS).toEqual([]);
   });
 });
