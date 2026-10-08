@@ -58,6 +58,15 @@ export default function StudentsPage() {
 
   const currentYearId = academicYearId || yearsData?.current?.id || '';
 
+  /**
+   * Enrolment needs an academic year, so without one the Add-student button is
+   * off. A control that is simply greyed out reads as broken rather than as
+   * waiting on a step before it, which on a freshly-emptied database is exactly
+   * the state the first person to use it lands in — so the button says why.
+   */
+  const noYearReason =
+    'Create an academic year first — a student can only be enrolled into one.';
+
   const { data: classSections } = useClassSections(currentYearId);
 
   const handleExport = async (format: 'csv' | 'xlsx') => {
@@ -100,6 +109,7 @@ export default function StudentsPage() {
               size="sm"
               icon={<IconPlus size={16} />}
               disabled={!currentYearId}
+              title={currentYearId ? undefined : noYearReason}
               onClick={() => setAdding(true)}
             >
               Add student
@@ -211,7 +221,9 @@ export default function StudentsPage() {
               description={
                 list.isFiltered
                   ? 'Try a different search or clear the filters.'
-                  : 'Add students manually, or import them from a CSV or Excel file.'
+                  : !currentYearId
+                    ? 'Create an academic year, then a class and a section — a student is enrolled into a section, and none exist yet.'
+                    : 'Add students manually, or import them from a CSV or Excel file.'
               }
               icon={<IconUsers size={18} />}
               action={
@@ -222,6 +234,7 @@ export default function StudentsPage() {
                         variant="primary"
                         icon={<IconPlus size={16} />}
                         disabled={!currentYearId}
+                        title={currentYearId ? undefined : noYearReason}
                         onClick={() => setAdding(true)}
                       >
                         Add student
