@@ -274,11 +274,11 @@ export default function StudentsPage() {
                         {student.admissionNumber ?? ''}
                       </span>
                     </TD>
-                    <TD className="tabular text-ink">{student.studentNumber}</TD>
+                    <TD className="tabular text-ink">{student.studentNumber ?? '—'}</TD>
                     <TD className="whitespace-nowrap text-ink">
-                      {student.className}-{student.sectionName}
+                      {student.className ?? '—'}-{student.sectionName ?? '—'}
                       <span className="block text-xs text-ink-subtle">
-                        {student.academicYearName}
+                        {student.academicYearName ?? '—'}
                       </span>
                     </TD>
                     <TD className="tabular whitespace-nowrap text-ink-muted">
@@ -536,8 +536,8 @@ function AddStudentDialog({
           disabled={loadingSections || assignable.length === 0}
           options={assignable.map((row) => ({
             value: row.sectionId,
-            label: `Section ${row.sectionName}`,
-            group: `Class ${row.className}`,
+            label: `Section ${row.sectionName ?? '—'}`,
+            group: `Class ${row.className ?? '—'}`,
           }))}
           error={errors.sectionId?.message ?? errors.classId?.message}
           {...sectionField}
