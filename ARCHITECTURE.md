@@ -482,7 +482,6 @@ unauthenticated request resolves to zero rows. **Never** put `service_role` in a
 | `npm run build` | typecheck + build + emit `dist/404.html` |
 | `npm run typecheck` / `npm test` | shared + frontend |
 | `npm run db:migrate` | `supabase db push` |
-| `npm run db:reset` | `supabase db reset` (drops, re-migrates, re-seeds) |
 | `npm run functions:serve` | `supabase functions serve` |
 
 ---
@@ -627,7 +626,7 @@ caught earlier by tests; the third was not caught by anything and locked every u
   every write path must supply it, and `import-commit`'s own comment warns that a
   divergence from `normalizeName()` means OCR matching silently stops matching. Seeding
   students required transcribing it by hand. `public.normalize_name()` (0016) is now
-  the SQL side, `seed.sql` calls it, and **both sides pin the same ten cases** — the
+  the SQL side, and **both sides pin the same ten cases** — the
   migration asserts them in SQL, `shared/tests/normalize-name.test.ts` in TypeScript.
   Neither `\s` nor `\p{L}` is valid in a Postgres ARE; the POSIX classes are.
 

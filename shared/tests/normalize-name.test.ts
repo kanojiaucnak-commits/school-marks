@@ -3,7 +3,7 @@ import { normalizeName, squashName } from '../src/utils';
 
 /**
  * `normalizeName()` has a counterpart in SQL: `public.normalize_name()`, added in
- * migration 0016 and used by `seed.sql`.
+ * migration 0016.
  *
  * `import-commit` stores each student's name in this normalised form, and the OCR
  * matcher compares against it. If the two implementations disagree about even one

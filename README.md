@@ -186,7 +186,6 @@ unauthenticated request resolves to zero rows. **Never** put `service_role` in a
 | `npm run typecheck` | shared + frontend |
 | `npm test` | shared (permission parity) + frontend |
 | `npm run db:migrate` | `supabase db push` |
-| `npm run db:reset` | `supabase db reset` |
 | `npm run functions:serve` | `supabase functions serve` |
 
 Rate limits match the ceilings the retired Worker enforced, now enforced globally in

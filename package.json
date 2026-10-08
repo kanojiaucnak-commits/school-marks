@@ -16,8 +16,6 @@
     "typecheck": "npm run typecheck -w @school/shared && npm run typecheck -w @school/frontend",
     "test": "npm run test -w @school/shared && npm run test -w @school/frontend",
     "db:migrate": "supabase db push",
-    "db:reset": "supabase db reset",
-    "db:seed": "supabase db reset",
     "functions:serve": "supabase functions serve --env-file supabase/.env.local"
   },
   "devDependencies": {

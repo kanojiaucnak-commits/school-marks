@@ -147,47 +147,37 @@ export function HomePage() {
           <HeroScene className="pointer-events-none absolute inset-0" />
         </Suspense>
         <div className="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
-          {/*
-            Two columns on wide screens: the promise on the left, the artefact
-            it makes on the right. The figure is `aria-hidden` because every
-            claim it shows is already made in words one column to the left —
-            for a screen reader it is decoration, not a second reading.
-          */}
-          <div className="grid items-center gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
-            <div className="max-w-3xl">
-              <p className="eyebrow">Academic session 2026–27</p>
+          <div className="max-w-3xl">
+            <p className="eyebrow">Academic session 2026–27</p>
 
-              <h1 className="mt-4 font-display text-4xl font-black leading-[1.1] tracking-[-0.02em] text-ink sm:text-5xl">
-                Every mark, from scanned sheet to locked record.
-              </h1>
+            <h1 className="mt-4 font-display text-4xl font-black leading-[1.1] tracking-[-0.02em] text-ink sm:text-5xl">
+              Every mark, from scanned sheet to locked record.
+            </h1>
 
-              <div className="rule-brand mt-6" />
+            <div className="rule-brand mt-6" />
 
-              <p className="mt-6 text-lg leading-relaxed text-ink-muted">
-                A marks management system for {SCHOOL.name}. OCR reads the mark sheet, teachers
-                correct it, reviewers approve it, and every change is recorded. Students never see
-                another student’s marks, and teachers only ever see the classes they are assigned to.
-              </p>
+            <p className="mt-6 text-lg leading-relaxed text-ink-muted">
+              A marks management system for {SCHOOL.name}. OCR reads the mark sheet, teachers
+              correct it, reviewers approve it, and every change is recorded. Students never see
+              another student’s marks, and teachers only ever see the classes they are assigned to.
+            </p>
 
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                {nav}
-                {!user && (
-                  <a
-                    href="#how-it-works"
-                    className="inline-flex h-control-md select-none items-center justify-center whitespace-nowrap rounded border border-line bg-surface px-4 text-sm font-medium text-ink transition-colors duration-100 hover:bg-surface-sunken"
-                  >
-                    How it works
-                  </a>
-                )}
-              </div>
-
-              <p className="mt-6 text-sm text-ink-faint">
-                Teachers and reviewers sign up here, then request the classes they teach — an
-                administrator approves each one.
-              </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              {nav}
+              {!user && (
+                <a
+                  href="#how-it-works"
+                  className="inline-flex h-control-md select-none items-center justify-center whitespace-nowrap rounded border border-line bg-surface px-4 text-sm font-medium text-ink transition-colors duration-100 hover:bg-surface-sunken"
+                >
+                  How it works
+                </a>
+              )}
             </div>
 
-            <MarkSheetFigure />
+            <p className="mt-6 text-sm text-ink-faint">
+              Teachers and reviewers sign up here, then request the classes they teach — an
+              administrator approves each one.
+            </p>
           </div>
         </div>
       </section>
@@ -302,101 +292,5 @@ export function HomePage() {
         </div>
       </footer>
     </div>
-  );
-}
-
-/* ==========================================================================
-   Hero figure — the mark sheet itself, drawn
-   ========================================================================== */
-
-/**
- * The artefact the whole system exists for: a completed mark sheet, approved
- * and locked, with the OCR claim from the copy attached to it as a small
- * floating confirmation.
- *
- * A stock photograph would promise something the school has not agreed to
- * show, and an abstract gradient would say nothing about marks — so the figure
- * is the product, built from the same tokens the real grid uses (hairline row
- * rules, tabular figures, the grade chip, the sealed-approval chip), which is
- * also why it will not drift out of style: when the app changes, this should
- * change with it.
- *
- * `aria-hidden`: the hero says all of this in words, one column to the left.
- * Student names are invented; nothing here is real data.
- */
-const DEMO_ROWS = [
-  { no: '1021', name: 'Aarav Patel', marks: '97', grade: 'A1' },
-  { no: '1022', name: 'Ananya Kumar', marks: '94', grade: 'A1' },
-  { no: '1023', name: 'Rohan Verma', marks: '89', grade: 'A2' },
-  { no: '1024', name: 'Sneha Joseph', marks: '86', grade: 'A2' },
-  { no: '1025', name: 'Vikram Rathore', marks: '82', grade: 'B1' },
-] as const;
-
-function MarkSheetFigure() {
-  return (
-    <figure aria-hidden="true" className="relative mx-auto w-full max-w-md">
-      {/* The seal as the faint watermark a printed sheet would carry.
-          Bottom-right so it peeks out from behind the card rather than
-          hiding under it. */}
-      <Crest size={96} className="absolute -bottom-8 right-1 hidden opacity-[0.14] sm:block" />
-
-      <div className="relative rounded-lg border border-line bg-surface shadow-popover">
-        {/* Letterhead */}
-        <div className="flex items-start justify-between gap-3 border-b border-line bg-surface-muted px-4 py-3">
-          <div>
-            <p className="eyebrow">Mathematics · Test II</p>
-            <p className="mt-0.5 text-sm font-semibold text-ink">Class VII–B</p>
-          </div>
-          <div className="text-right">
-            <p className="text-2xs uppercase tracking-[0.08em] text-ink-faint">Session</p>
-            <p className="tabular mt-0.5 text-xs font-medium text-ink-muted">2026–27</p>
-          </div>
-        </div>
-
-        {/* Column heads */}
-        <div className="grid grid-cols-[2.5rem_1fr_3rem_3.5rem] gap-2 border-b border-line-soft px-4 pt-2">
-          <span className="eyebrow">No.</span>
-          <span className="eyebrow">Student</span>
-          <span className="eyebrow text-right">Marks</span>
-          <span className="eyebrow text-right">Grade</span>
-        </div>
-
-        {/* Rows */}
-        <ul className="px-4">
-          {DEMO_ROWS.map((row) => (
-            <li
-              key={row.no}
-              className="grid grid-cols-[2.5rem_1fr_3rem_3.5rem] items-center gap-2 border-b border-line-soft py-2.5 last:border-b-0"
-            >
-              <span className="tabular text-xs text-ink-faint">{row.no}</span>
-              <span className="truncate text-sm text-ink">{row.name}</span>
-              <span className="tabular text-right text-sm font-semibold text-ink">{row.marks}</span>
-              <span className="flex justify-end">
-                <span className="tabular rounded-sm border border-brand-100 bg-brand-50 px-1.5 py-px text-2xs font-semibold text-brand-700">
-                  {row.grade}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-
-        {/* Signature strip */}
-        <div className="flex items-center justify-between gap-3 rounded-b-lg border-t border-line bg-surface-muted px-4 py-3">
-          <span className="text-2xs text-ink-faint">Entered by R. Thomas</span>
-          <span className="inline-flex items-center gap-1.5 rounded-sm border border-sealed/30 bg-sealed-soft px-2 py-1 text-2xs font-semibold text-sealed-strong">
-            <IconCheck size={11} />
-            Approved · locked
-          </span>
-        </div>
-      </div>
-
-      {/* The OCR claim, made visible as a confirmation chip floating over
-          the sheet's corner — the one overlap in the composition, and it
-          earns its place by restating the copy's first promise. */}
-      <div className="absolute -bottom-3.5 -left-3 flex items-center gap-1.5 rounded-md border border-line bg-surface px-3 py-2 shadow-popover">
-        <IconScan size={13} className="text-brand-600" />
-        <span className="text-2xs font-semibold text-ink">OCR extracted · 5 of 5 matched</span>
-      </div>
-    </figure>
   );
 }
