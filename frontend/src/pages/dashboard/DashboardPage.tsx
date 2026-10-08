@@ -20,7 +20,6 @@ import {
   ActionList,
   Figure,
   FigureRow,
-  Meter,
   PageHeader,
   SectionHeader,
   TitledPanel,
@@ -317,10 +316,9 @@ function AdminDashboardView() {
         </Alert>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4">
         {/* 1 — what needs attention, expressed as work rather than counters. */}
         <TitledPanel
-          className="lg:col-span-2"
           title="Waiting on someone"
           description="Grouped by who has to act next."
         >
@@ -377,36 +375,9 @@ function AdminDashboardView() {
             }
           />
         </TitledPanel>
-
-        {/* 2 — the state of the whole examination, in one strip. */}
-        <TitledPanel title="This examination" description="All mark sheets, all subjects.">
-          <FigureRow
-            className="grid-cols-2 lg:grid-cols-2 [&>*:not(:first-child)]:lg:border-l-0 [&>*:not(:first-child)]:lg:pl-0"
-            items={[
-              { label: 'Students', value: data.totalStudents.toLocaleString() },
-              { label: 'Teachers', value: data.totalTeachers },
-              { label: 'Classes', value: data.totalClasses, hint: `${data.totalSections} sections` },
-              { label: 'Subjects', value: data.totalSubjects },
-            ]}
-          />
-
-          <div className="mt-5 border-t border-line-soft pt-4">
-            <Meter
-              value={data.completionPercentage}
-              label="Approved or locked"
-              valueLabel={`${data.completionPercentage}%`}
-              tone={data.completionPercentage === 100 ? 'success' : 'accent'}
-            />
-            <p className="mt-2 text-xs text-ink-subtle">
-              {pluralise(data.approvedSubmissions, 'sheet')} approved and{' '}
-              {pluralise(data.lockedSubmissions, 'sheet')} locked. Locked sheets are permanent
-              records.
-            </p>
-          </div>
-        </TitledPanel>
       </div>
 
-      {/* 3 — two charts, each answering one question. */}
+      {/* 2 — two charts, each answering one question. */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <TitledPanel
           title="Where mark sheets are"
