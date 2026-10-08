@@ -1,5 +1,6 @@
 import { enforceRateLimit, hasPermission, requireCaller } from '../_shared/auth.ts';
 import { fail, handle, json, readJson } from '../_shared/http.ts';
+import { type SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import {
   readClientPages,
   type OcrPage,
@@ -143,7 +144,12 @@ Deno.serve(
       // body.
       const clientPages = rawPages === undefined ? null : readClientPages(rawPages);
 
-      if (clientPages && clientPages.error) {
+      // A truthiness test would not narrow: `ClientPagesResult` is a union on
+      // `error`, and an `error` of `''` is falsy while still belonging to the
+      // `{ pages: null }` branch — which is why TypeScript still saw `pages` as
+      // `OcrPage[] | null` here, and why an empty message would have fallen
+      // through to `pages.length` on a null.
+      if (clientPages && clientPages.error !== null) {
         return fail('VALIDATION_ERROR', clientPages.error, 400);
       }
 
@@ -257,7 +263,7 @@ Deno.serve(
 );
 
 async function markFailed(
-  supabase: { from: (t: string) => { update: (v: unknown) => { eq: (c: string, v: unknown) => PromiseLike<unknown> } } },
+  supabase: SupabaseClient,
   documentId: string,
   message: string,
 ): Promise<void> {
@@ -967,14 +973,7 @@ function normalizeName(name: string): string {
  * rows from the previous attempt, and the function makes it atomic.
  */
 async function replaceResults(
-  supabase: {
-    from: (t: string) => {
-      update: (v: unknown) => { eq: (c: string, v: unknown) => PromiseLike<unknown> };
-      delete: () => { eq: (c: string, v: unknown) => PromiseLike<unknown> };
-      insert: (v: unknown) => PromiseLike<unknown>;
-    };
-    rpc: (fn: string, args: unknown) => PromiseLike<{ data: unknown; error: unknown }>;
-  },
+  supabase: SupabaseClient,
   documentId: string,
   matched: MatchedLine[],
   averageConfidence: number,

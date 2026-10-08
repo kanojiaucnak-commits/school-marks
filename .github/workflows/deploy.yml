@@ -4,20 +4,23 @@
 # Replaces the Cloudflare Pages deploy. Secrets are supplied as repository
 # secrets (Settings → Secrets and variables → Actions), not hard-coded here:
 # VITE_CLERK_PUBLISHABLE_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
-# VITE_APP_ORIGIN, SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_ID,
-# SUPABASE_DB_PASSWORD.
+# VITE_APP_ORIGIN.
+#
+# The Supabase `db push` / `functions deploy` job that used to live at the
+# bottom of this file is gone. It duplicated `supabase.yml` line for line, and
+# the two are not idempotent with respect to each other: re-enabling this
+# workflow would have run two `db push` calls against production concurrently,
+# with the concurrency group in `supabase.yml` covering only one of them. The
+# database and the Edge Functions are deployed by `supabase.yml` alone.
 # ---------------------------------------------------------------------------
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
-    # Deploy the schema and Edge Functions to Supabase alongside the frontend.
-    # Remove this filter if you want every push to touch the database.
     paths:
       - 'frontend/**'
       - 'shared/**'
-      - 'supabase/**'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/deploy.yml'
@@ -100,47 +103,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-
-  # -------------------------------------------------------------------------
-  # Supabase schema + Edge Functions
-  #
-  # Runs only when supabase/** changes. Requires SUPABASE_ACCESS_TOKEN and
-  # SUPABASE_PROJECT_ID as repository secrets, and the CLI installed below.
-  # -------------------------------------------------------------------------
-  supabase:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Link to the project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
-
-      # `db push` applies only migrations that are not yet recorded in the
-      # remote `supabase_migrations` table, so this is safe to run on every push.
-      # It will not re-run migrations that have already been applied.
-      - name: Apply database migrations
-        run: supabase db push
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-
-      # `--no-verify-jwt` is required, not an optimisation. These functions
-      # authenticate with Clerk session tokens, but the Supabase gateway only
-      # understands tokens signed with the project's own JWT secret, so with
-      # gateway verification on it rejects every request with a bare 401 before
-      # any function code runs. Each function verifies the Clerk token itself in
-      # `_shared/auth.ts` — real signature validation against Clerk's JWKS.
-      - name: Deploy Edge Functions
-        run: supabase functions deploy --no-verify-jwt --project-ref "$SUPABASE_PROJECT_ID"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}

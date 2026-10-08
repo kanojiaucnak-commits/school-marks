@@ -75,11 +75,16 @@ function getPool(): Pool {
       Deno.env.get('PG_POOLER_PORT'),
     ),
     2,
-    {
-      // Harmless on a direct connection and required by the transaction pooler.
-      // Every statement here is short and parameterised, so preparing buys nothing.
-      prepare: false,
-    },
+    // The third argument is `lazy`, not an options bag. `@db/postgres` exposes no
+    // `prepare` setting anywhere — it is not in `ClientOptions` — so the
+    // `{ prepare: false }` that used to sit here was being read as the boolean.
+    // It type-checked against nothing, it never disabled preparing, and every Edge
+    // Function has always run through the pooler with the driver's own defaults.
+    //
+    // `true` is kept deliberately: it is the behaviour production has actually been
+    // running with, opening connections on first use instead of two of them at
+    // module load, which is what a cold Edge Function wants.
+    true,
   );
 
   return pool;

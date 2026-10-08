@@ -51,6 +51,14 @@ jobs:
 
       - run: npm ci
 
+      # Not preinstalled in a way this step can rely on, and the version is
+      # pinned rather than `v2.x`: this is a gate, and a new Deno release adding
+      # a check should be adopted deliberately instead of silently turning a
+      # green deploy red.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.9.6'
+
       # These are the repo's gates, and they gate the Supabase deploy too.
       # `shared` tests are the load-bearing part: `permissions.seed.test.ts`
       # scans every migration and asserts the SQL permission grants match the
@@ -62,6 +70,23 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      # The Edge Functions have no other gate. `npm run typecheck` covers
+      # `shared` and `frontend` only — nothing in `supabase/functions` is part of
+      # either workspace — so an Edge Function that does not type-check has been
+      # reaching production on every push, including a Pool constructed with an
+      # options bag where the driver takes a boolean.
+      #
+      # `--node-modules-dir=none` is required rather than a preference. The npm
+      # workspaces hoist `fflate@^0.8.3` to the root `node_modules`, while
+      # `_shared/xlsx.ts` imports the exact `npm:fflate@0.8.2`; Deno resolves npm
+      # specifiers against `node_modules` by default and rejects the mismatch, so
+      # without this flag the check fails on the dependency rather than on the
+      # code. Letting Deno own its own npm resolution is also what the deployed
+      # runtime does — the Edge Functions are never bundled out of this repo's
+      # `node_modules`.
+      - name: Typecheck Edge Functions
+        run: find supabase/functions -name '*.ts' -print0 | xargs -0 deno check --node-modules-dir=none
 
       - uses: supabase/setup-cli@v1
         with:

@@ -33,7 +33,7 @@ component is not a rule.
 
 | # | Rule | Enforced by |
 | --- | --- | --- |
-| 1 | OCR-extracted marks are **never** final. A human must verify every row, and ambiguous student matches are never auto-assigned. | `ocr_results.verified` defaults `false`; `ocr:confirm` permission on the confirm path; `studentMatcher.ts` refuses to auto-assign below `AMBIGUITY_MARGIN` |
+| 1 | OCR-extracted marks are **never** final. A human must verify every row, and ambiguous student matches are never auto-assigned. | `ocr_results.verified` defaults `false`; `ocr:confirm` permission on the confirm path; `supabase/functions/ocr-process/index.ts` refuses to auto-assign when the best and runner-up candidate scores are within `AMBIGUITY_MARGIN` |
 | 2 | A teacher can see **only** students assigned to them. | `is_assigned_to()` / `can_read_sheet()` in `supabase/migrations/0002_rls.sql`, applied by the `marks`, `mark_submissions` and `ocr_documents` policies |
 | 3 | Teachers **cannot** modify locked marks. Only a reviewer may, and only with a written reason. | `submissions_owner_update` policy requires an editable status; `marks_update_locked` policy requires `marks:correct_locked`; `save_marks_grid()` returns `SUBMISSION_NOT_EDITABLE` |
 | 4 | A mark can **never** exceed the exam maximum. | `chk_marks_within_max` CHECK constraint, **and** an explicit range check inside `save_marks_grid()` |

@@ -1,11 +1,13 @@
 import { Suspense, lazy, useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { useAuth as useClerkAuth } from '@clerk/react';
+import { PERMISSIONS, type Permission } from '@school/shared';
 import { SignInOpener, SignUpOpener } from './components/auth/ClerkModals';
 import { useAuth } from './lib/auth';
+import { can } from './lib/permissions';
 import { SCHOOL } from './lib/school';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
-import { LoadingState } from './components/ui/States';
+import { LoadingState, NoAccessState } from './components/ui/States';
 import { AppLayout } from './components/layout/AppLayout';
 import { HomePage } from './pages/HomePage';
 import { AccountUnavailablePage } from './pages/AccountUnavailablePage';
@@ -84,6 +86,43 @@ function RequireAuth({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Blocks a route the current role holds no permission for.
+ *
+ * Every gated page was already hidden from the navigation by `NAVIGATION` in
+ * `lib/permissions`, and that is all it was: hiding a link is not a route guard.
+ * A typed URL, a bookmark, a stale tab or the browser's back button all reach the
+ * route anyway, and the page then fetches rows RLS refuses to return and renders
+ * an empty screen that reads as broken rather than as forbidden. `/app/teachers`
+ * was the clearest case, but it was not a special case — every setup, insight and
+ * people route below was in the same position.
+ *
+ * This is a usability gate and never a security one: RLS is still what decides
+ * whether any row comes back, and a direct PostgREST call ignores this entirely.
+ * It reads the same `PERMISSIONS` constant the navigation does, so a link that is
+ * visible leads to a page that is permitted, and the two cannot drift.
+ */
+function RequirePermission({
+  permission,
+  children,
+}: {
+  permission: Permission;
+  children: ReactNode;
+}) {
+  const { user } = useAuth();
+  return user && can(user, permission) ? <>{children}</> : <NoAccessState />;
+}
+
+/**
+ * Shorthand for gating a route element: `element={gate(PERMISSIONS.X, <Page />)}`.
+ *
+ * The page element is built either way but never rendered when access is denied,
+ * so a lazy route is still not downloaded by someone who cannot open it.
+ */
+function gate(permission: Permission, element: ReactNode) {
+  return <RequirePermission permission={permission}>{element}</RequirePermission>;
+}
+
+/**
  * Keeps the document title in sync with the route.
  *
  * The suffix is the school name rather than a generic "School Marks Management".
@@ -152,34 +191,67 @@ export function App() {
               point is that a new teacher can start without an admin. */}
           <Route path="my-classes" element={<MyClassesPage />} />
 
-          <Route path="marks" element={<MarksEntryPage />} />
-          <Route path="marks/:submissionId" element={<MarksEntryPage />} />
+          <Route
+            path="marks"
+            element={gate(PERMISSIONS.MARKS_EDIT, <MarksEntryPage />)}
+          />
+          <Route
+            path="marks/:submissionId"
+            element={gate(PERMISSIONS.MARKS_EDIT, <MarksEntryPage />)}
+          />
 
-          <Route path="review" element={<ReviewQueuePage />} />
-          <Route path="review/:submissionId" element={<SubmissionDetailPage />} />
+          <Route
+            path="review"
+            element={gate(PERMISSIONS.MARKS_REVIEW, <ReviewQueuePage />)}
+          />
+          <Route
+            path="review/:submissionId"
+            element={gate(PERMISSIONS.MARKS_REVIEW, <SubmissionDetailPage />)}
+          />
 
-          <Route path="ocr" element={<OcrUploadPage />} />
-          <Route path="ocr/:documentId" element={<OcrReviewPage />} />
+          <Route path="ocr" element={gate(PERMISSIONS.OCR_VIEW_ASSIGNED, <OcrUploadPage />)} />
+          <Route
+            path="ocr/:documentId"
+            element={gate(PERMISSIONS.OCR_VIEW_ASSIGNED, <OcrReviewPage />)}
+          />
 
-          <Route path="students" element={<StudentsPage />} />
-          <Route path="students/import" element={<StudentImportPage />} />
-          <Route path="students/:studentId" element={<StudentDetailPage />} />
+          <Route path="students" element={gate(PERMISSIONS.STUDENT_VIEW, <StudentsPage />)} />
+          <Route
+            path="students/import"
+            element={gate(PERMISSIONS.STUDENT_IMPORT, <StudentImportPage />)}
+          />
+          <Route
+            path="students/:studentId"
+            element={gate(PERMISSIONS.STUDENT_VIEW, <StudentDetailPage />)}
+          />
 
-          <Route path="teachers" element={<TeachersPage />} />
+          <Route path="teachers" element={gate(PERMISSIONS.USER_LIST, <TeachersPage />)} />
 
-          <Route path="academic-years" element={<AcademicYearsPage />} />
-          <Route path="classes" element={<ClassesPage />} />
-          <Route path="subjects" element={<SubjectsPage />} />
-          <Route path="exams" element={<ExamsPage />} />
-          <Route path="assignments" element={<AssignmentsPage />} />
-          <Route path="class-requests" element={<ClassRequestsPage />} />
-          <Route path="grading" element={<GradingPage />} />
+          <Route
+            path="academic-years"
+            element={gate(PERMISSIONS.ACADEMIC_YEAR_MANAGE, <AcademicYearsPage />)}
+          />
+          <Route path="classes" element={gate(PERMISSIONS.CLASS_MANAGE, <ClassesPage />)} />
+          <Route path="subjects" element={gate(PERMISSIONS.SUBJECT_MANAGE, <SubjectsPage />)} />
+          <Route path="exams" element={gate(PERMISSIONS.EXAM_MANAGE, <ExamsPage />)} />
+          <Route
+            path="assignments"
+            element={gate(PERMISSIONS.ASSIGNMENT_MANAGE, <AssignmentsPage />)}
+          />
+          <Route
+            path="class-requests"
+            element={gate(PERMISSIONS.ASSIGNMENT_DECIDE, <ClassRequestsPage />)}
+          />
+          <Route path="grading" element={gate(PERMISSIONS.GRADING_MANAGE, <GradingPage />)} />
 
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="exports" element={<ExportsPage />} />
-          <Route path="audit" element={<AuditLogPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="database" element={<DatabasePage />} />
+          <Route
+            path="reports"
+            element={gate(PERMISSIONS.REPORT_VIEW_ASSIGNED, <ReportsPage />)}
+          />
+          <Route path="exports" element={gate(PERMISSIONS.EXPORT_CREATE, <ExportsPage />)} />
+          <Route path="audit" element={gate(PERMISSIONS.AUDIT_LOG_VIEW, <AuditLogPage />)} />
+          <Route path="settings" element={gate(PERMISSIONS.SETTINGS_MANAGE, <SettingsPage />)} />
+          <Route path="database" element={gate(PERMISSIONS.SETTINGS_MANAGE, <DatabasePage />)} />
 
           <Route path="profile" element={<ProfilePage />} />
         </Route>
