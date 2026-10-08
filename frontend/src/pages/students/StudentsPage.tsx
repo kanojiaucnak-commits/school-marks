@@ -352,9 +352,18 @@ function useClassSections(academicYearId: string) {
 /* Add student dialog                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** An empty text input becomes `NULL`, so optional columns do not fill with `''`. */
-const blankToNull = (value: string): string | null => {
-  const trimmed = value.trim();
+/**
+ * An empty text input becomes `NULL`, so optional columns do not fill with `''`.
+ *
+ * It has to tolerate `null` as well as `''`, because react-hook-form runs every
+ * `setValueAs` back over the field's own default value as the input mounts — and
+ * these optional fields default to `null`, which is what the column holds. On
+ * the first frame the callback is therefore handed `null` rather than a string,
+ * and trimming it unconditionally threw during commit and took the page down.
+ */
+const blankToNull = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  const trimmed = String(value).trim();
   return trimmed === '' ? null : trimmed;
 };
 
@@ -531,7 +540,13 @@ function AddStudentDialog({
             hint="Unique within the section."
             error={errors.rollNumber?.message}
             {...register('rollNumber', {
-              setValueAs: (value: string) => (value.trim() === '' ? null : Number(value)),
+              // The same mount-time `null` `blankToNull` defends against: a roll
+              // number the teacher never typed is absent, and absent must stay
+              // `null` rather than become `0`, which would be a real number.
+              setValueAs: (value: unknown) =>
+                value === null || value === undefined || String(value).trim() === ''
+                  ? null
+                  : Number(value),
             })}
           />
         </div>
